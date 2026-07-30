@@ -59,6 +59,22 @@ button { font-family: inherit; cursor: pointer; }
   flex-direction: column;
 }
 
+/* Enquanto ninguém fizer login, a página fica em branco — só o card de
+   login aparece. O painel (topo, abas e conteúdo) só é revelado depois que
+   o JS confirma o login e adiciona a classe "autenticado" em .app. Restrito
+   a body.gerenciador (index.html) para não afetar o cardápio do cliente,
+   que também usa a classe .app mas não tem tela de login. */
+body.gerenciador .app:not(.autenticado) > .topbar,
+body.gerenciador .app:not(.autenticado) > nav.tabs,
+body.gerenciador .app:not(.autenticado) > main,
+body.gerenciador .app:not(.autenticado) > .footer-note {
+  display: none;
+}
+
+#login-overlay {
+  background: var(--white);
+}
+
 .topbar {
   background: var(--white);
   border-bottom: 1px solid var(--border);

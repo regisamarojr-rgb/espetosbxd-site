@@ -14,10 +14,10 @@ const LOGIN_STORAGE_KEY = "bxd_usuario_logado_v1";
    Configurações do projeto > Geral > "Seus apps" > SDK setup and configuration.
    =================================================== */
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyCh9Lo4Kal2VgvGKzKzYcCx6-v6iYQv1iQ",
-  authDomain: "espetosbxd-6a4d3.firebaseapp.com",
-  projectId: "espetosbxd-6a4d3",
-  storageBucket: "espetosbxd-6a4d3.firebasestorage.app",
+  apiKey: "AIzaSyAc15JrFVt6eX-dbv8Jm6m-Ss9iH-p-R7Y",
+  authDomain: "bxd-espetos.firebaseapp.com",
+  projectId: "bxd-espetos",
+  storageBucket: "bxd-espetos.firebasestorage.app",
   messagingSenderId: "445430834756",
   appId: "1:445430834756:web:77d42342f0367f77b2be11",
 };
@@ -1478,6 +1478,12 @@ function popularSelectLogin() {
 function mostrarTelaLogin() {
   const overlay = document.getElementById("login-overlay");
   if (!overlay) return;
+  // Esconde todo o painel (topo, abas e conteúdo) — só o card de login fica
+  // visível, numa página em branco. Isso impede que qualquer visitante veja
+  // o gerenciador antes de logar com um usuário já cadastrado (não existe
+  // tela pública de criação de conta).
+  const app = document.querySelector(".app");
+  if (app) app.classList.remove("autenticado");
   popularSelectLogin();
   overlay.style.display = "flex";
   const pin = document.getElementById("login-pin");
@@ -1487,6 +1493,8 @@ function mostrarTelaLogin() {
 function esconderTelaLogin() {
   const overlay = document.getElementById("login-overlay");
   if (overlay) overlay.style.display = "none";
+  const app = document.querySelector(".app");
+  if (app) app.classList.add("autenticado");
 }
 
 // Confere usuário + PIN escolhidos na tela de login e, se corretos, entra no painel.
