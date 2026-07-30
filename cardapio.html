@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BXD — Cardápio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body class="cardapio-client">
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand">BXD <span>Cardápio</span></div>
+  </header>
+
+  <main>
+
+    <!-- ============ CARDAPIO / PEDIDO (CLIENTE) ============ -->
+    <section id="page-cardapio" class="page active">
+      <div class="page-header">
+        <div>
+          <h2>Cardápio</h2>
+          <p>Escolha os itens, preencha os dados e envie o pedido.</p>
+        </div>
+      </div>
+
+      <div class="card" id="acompanhar-pedido" style="display:none;">
+        <h3>Acompanhar pedido</h3>
+        <div id="acompanhar-conteudo"></div>
+        <button class="btn secondary" id="btn-novo-pedido" style="margin-top:16px;">Fazer novo pedido</button>
+      </div>
+
+      <div class="grid grid-2" style="align-items:start;" id="cardapio-pedido-area">
+        <div id="menu-list"></div>
+
+        <div class="card cart-box">
+          <h3>Seu pedido</h3>
+          <div id="cart-lines"></div>
+          <div class="cart-total"><span>Total</span><span id="cart-total">R$ 0,00</span></div>
+
+          <form id="form-pedido" onsubmit="return false;">
+            <label>Nome</label>
+            <input id="f-nome" type="text" placeholder="Nome do cliente" />
+
+            <label>Telefone</label>
+            <input id="f-telefone" type="text" placeholder="(00) 00000-0000" />
+
+            <label>Tipo</label>
+            <select id="f-tipo-entrega">
+              <option value="entrega">Entrega</option>
+              <option value="retirada">Retirada no local</option>
+            </select>
+
+            <div id="campos-entrega">
+              <label>Endereço</label>
+              <input id="f-endereco" type="text" placeholder="Rua, número, bairro" />
+
+              <label>Ponto de referência</label>
+              <input id="f-referencia" type="text" placeholder="Opcional" />
+            </div>
+
+            <label>Forma de pagamento</label>
+            <select id="f-pagamento">
+              <option value="dinheiro">Dinheiro</option>
+              <option value="pix">Pix</option>
+              <option value="cartao">Cartão</option>
+            </select>
+
+            <div id="campo-troco">
+              <label>Troco para</label>
+              <input id="f-troco" type="text" placeholder="Ex: R$ 50,00" />
+            </div>
+
+            <label>Observações</label>
+            <textarea id="f-obs" rows="2" placeholder="Ex: sem cebola, ponto da carne, etc."></textarea>
+
+            <button class="btn" id="btn-enviar-pedido" style="width:100%; margin-top:16px;" disabled>Enviar pedido</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="footer-note">BXD · Espetos</div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

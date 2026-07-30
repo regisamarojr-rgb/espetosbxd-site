@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BXD — Gerenciador de Espetos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="app">
+
+  <div class="modal-overlay" id="login-overlay" style="display:flex;">
+    <div class="modal">
+      <h3 style="margin-bottom:4px;">Entrar</h3>
+      <p style="color:var(--muted); font-size:12px; margin-bottom:14px;">Selecione seu usuário e informe o PIN de acesso.</p>
+      <label>Usuário</label>
+      <select id="login-usuario"></select>
+      <label>PIN</label>
+      <input id="login-pin" type="password" inputmode="numeric" placeholder="****" />
+      <button class="btn" id="btn-login" style="width:100%; margin-top:16px;">Entrar</button>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <div class="brand">BXD <span>Gerenciador de Espetos</span></div>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <span id="usuario-logado-nome" style="font-size:13px; color:var(--muted);"></span>
+      <button class="btn secondary small" id="btn-logout" style="display:none;">Sair</button>
+      <a class="btn secondary small" href="cardapio.html" target="_blank" rel="noopener">Abrir cardápio do cliente ↗</a>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button data-page="pedidos" class="active">Pedidos</button>
+    <button data-page="caixa">Fluxo de Caixa</button>
+    <button data-page="estoque">Estoque <span id="badge-estoque-baixo" class="badge-alert" style="display:none;"></span></button>
+    <button data-page="entrega">Entrega</button>
+    <button data-page="colaboradores">Colaboradores</button>
+    <button data-page="historico">Histórico de Clientes</button>
+    <button data-page="relatorios">Relatórios</button>
+  </nav>
+
+  <main>
+
+    <!-- ============ PEDIDOS (DONO) ============ -->
+    <section id="page-pedidos" class="page active">
+      <button class="btn small" id="btn-dia-finalizado" style="background:#c0392b; color:#fff; border:none; padding:3px 10px; font-size:11px; margin-bottom:14px;">Dia finalizado</button>
+
+      <div class="page-header">
+        <div>
+          <h2>Pedidos</h2>
+          <p>Pedidos recebidos com todas as informações de entrega.</p>
+        </div>
+        <div class="field" style="flex-direction:row;">
+          <button class="btn" id="btn-toggle-balcao">+ Novo pedido (Balcão/Mesa)</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px; padding:14px 16px;">
+        <p style="color:var(--muted); font-size:12px; margin-bottom:10px;">Filtros</p>
+        <div class="field" style="flex-direction:row; gap:14px; align-items:center; flex-wrap:wrap;">
+          <input type="date" id="filtro-data-pedidos" />
+          <label class="checkbox-line" style="margin:0;">
+            <input type="checkbox" id="filtro-todos-dias" />
+            Ver todos os dias
+          </label>
+          <select id="filtro-status">
+            <option value="todos">Todos os status</option>
+            <option value="aberto">Pedidos em aberto</option>
+            <option value="aguardando_motoboy">Retirada motoboy</option>
+            <option value="aguardando_balcao">Retirada balcão</option>
+            <option value="entregue">Entregue / Concluído</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field" style="flex-direction:row; gap:10px; margin-bottom:20px;">
+        <button class="btn secondary" id="btn-cancelamentos">Cancelamentos <span id="badge-cancelamentos" class="badge-alert" style="display:none;"></span></button>
+      </div>
+
+      <div id="balcao-panel" class="card" style="display:none; margin-bottom:20px;">
+        <h3 style="margin-bottom:10px;">Novo pedido — Balcão / Mesa</h3>
+        <div class="grid grid-2" style="align-items:start;">
+          <div id="menu-list"></div>
+
+          <div class="card cart-box">
+            <div id="cart-lines"></div>
+            <div class="cart-total"><span>Total</span><span id="cart-total">R$ 0,00</span></div>
+
+            <form id="form-pedido" onsubmit="return false;">
+              <label>Nome</label>
+              <input id="f-nome" type="text" placeholder="Nome do cliente (ou identificação da mesa)" />
+
+              <label>Telefone (opcional)</label>
+              <input id="f-telefone" type="text" placeholder="(00) 00000-0000" />
+
+              <label>Tipo</label>
+              <select id="f-tipo-entrega">
+                <option value="balcao">Balcão</option>
+                <option value="mesa">Mesa</option>
+              </select>
+
+              <div id="campo-mesa">
+                <label>Número da mesa</label>
+                <input id="f-mesa" type="text" placeholder="Ex: Mesa 5" />
+              </div>
+
+              <label>Forma de pagamento</label>
+              <select id="f-pagamento">
+                <option value="dinheiro">Dinheiro</option>
+                <option value="pix">Pix</option>
+                <option value="cartao">Cartão</option>
+              </select>
+
+              <div id="campo-troco">
+                <label>Troco para</label>
+                <input id="f-troco" type="text" placeholder="Ex: R$ 50,00" />
+              </div>
+
+              <label class="checkbox-line">
+                <input id="f-ja-pago" type="checkbox" />
+                Já foi pago (lançar no caixa agora)
+              </label>
+
+              <label>Observações</label>
+              <textarea id="f-obs" rows="2" placeholder="Ex: sem cebola, ponto da carne, etc."></textarea>
+
+              <button class="btn" id="btn-enviar-pedido" style="width:100%; margin-top:16px;" disabled>Registrar pedido</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div id="pedidos-list"></div>
+    </section>
+
+    <!-- ============ MODAL: DETALHE DO PEDIDO ============ -->
+    <div class="modal-overlay" id="pedido-modal-overlay" style="display:none;">
+      <div class="modal">
+        <button class="modal-close" id="pedido-modal-close" aria-label="Fechar">×</button>
+        <div id="pedido-modal-content"></div>
+      </div>
+    </div>
+
+    <!-- ============ MODAL: HISTÓRICO DE CANCELAMENTOS ============ -->
+    <div class="modal-overlay" id="cancelamentos-modal-overlay" style="display:none;">
+      <div class="modal">
+        <button class="modal-close" id="cancelamentos-modal-close" aria-label="Fechar">×</button>
+        <h3 style="margin-bottom:16px;">Histórico de cancelamentos</h3>
+        <div id="cancelamentos-list"></div>
+      </div>
+    </div>
+
+    <!-- ============ MODAL: CONFIRMAR DIA FINALIZADO ============ -->
+    <div class="modal-overlay" id="dia-finalizado-modal-overlay" style="display:none;">
+      <div class="modal">
+        <h3 style="margin-bottom:8px;">Finalizar o dia?</h3>
+        <p style="color:var(--muted); font-size:13px; margin-bottom:20px;">Isso vai registrar a saída de ponto de todos os funcionários que ainda estão com entrada em aberto.</p>
+        <div class="field" style="flex-direction:row; gap:10px;">
+          <button class="btn secondary" id="btn-dia-finalizado-voltar" style="flex:1;">Voltar</button>
+          <button class="btn" id="btn-dia-finalizado-confirmar" style="flex:1; background:#c0392b; color:#fff; border:none;">Confirmar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ MODAL: HISTÓRICO DE ENTREGAS ============ -->
+    <div class="modal-overlay" id="entregas-modal-overlay" style="display:none;">
+      <div class="modal">
+        <button class="modal-close" id="entregas-modal-close" aria-label="Fechar">×</button>
+        <h3 style="margin-bottom:16px;">Histórico de entregas</h3>
+        <div id="entregas-list"></div>
+      </div>
+    </div>
+
+    <!-- ============ MODAL: HISTÓRICO DE COMPRAS ============ -->
+    <div class="modal-overlay" id="compras-modal-overlay" style="display:none;">
+      <div class="modal">
+        <button class="modal-close" id="compras-modal-close" aria-label="Fechar">×</button>
+        <h3 style="margin-bottom:16px;">Histórico de compras</h3>
+        <div id="compras-list"></div>
+      </div>
+    </div>
+
+    <!-- ============ MODAL: HISTÓRICO DE PERDAS/DESPERDÍCIO ============ -->
+    <div class="modal-overlay" id="perdas-modal-overlay" style="display:none;">
+      <div class="modal">
+        <button class="modal-close" id="perdas-modal-close" aria-label="Fechar">×</button>
+        <h3 style="margin-bottom:16px;">Histórico de perdas / desperdício</h3>
+        <div id="perdas-list"></div>
+      </div>
+    </div>
+
+    <!-- ============ FLUXO DE CAIXA ============ -->
+    <section id="page-caixa" class="page">
+      <div class="page-header">
+        <div>
+          <h2>Fluxo de Caixa</h2>
+          <p>Entradas dos pedidos pagos + lançamentos manuais.</p>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat"><div class="label">Entradas</div><div class="value" id="stat-entradas">R$ 0,00</div></div>
+        <div class="stat"><div class="label">Saídas</div><div class="value" id="stat-saidas">R$ 0,00</div></div>
+        <div class="stat"><div class="label">Saldo</div><div class="value" id="stat-saldo">R$ 0,00</div></div>
+        <div class="stat"><div class="label">Previsão de Faturamento</div><div class="value" id="stat-previsao">R$ 0,00</div><div class="stat-sub" id="stat-previsao-sub"></div></div>
+      </div>
+
+      <div class="subtabs">
+        <button data-subpage="lancamentos" class="active">Lançamentos</button>
+        <button data-subpage="graficos">Gráficos</button>
+        <button data-subpage="operador">Por operador</button>
+      </div>
+
+      <div id="caixa-view-lancamentos" class="subpage active">
+        <div class="card" style="margin-bottom:20px;">
+          <h3 style="margin-bottom:10px;">Novo lançamento manual</h3>
+          <div class="inline-form">
+            <div class="field">
+              <label>Tipo</label>
+              <select id="cx-tipo">
+                <option value="entrada">Entrada</option>
+                <option value="saida">Saída</option>
+              </select>
+            </div>
+            <div class="field" style="flex:2;">
+              <label>Descrição</label>
+              <input id="cx-descricao" type="text" placeholder="Ex: Compra de carvão" />
+            </div>
+            <div class="field">
+              <label>Valor (R$)</label>
+              <input id="cx-valor" type="number" min="0" step="0.01" />
+            </div>
+            <div class="field">
+              <label>Data</label>
+              <input id="cx-data" type="date" />
+            </div>
+            <div class="field">
+              <label>Operador (opcional)</label>
+              <select id="cx-operador">
+                <option value="">Não atribuído</option>
+              </select>
+            </div>
+            <div class="field" style="flex:0;">
+              <button class="btn" id="btn-add-lancamento">Adicionar</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="caixa-list"></div>
+      </div>
+
+      <div id="caixa-view-graficos" class="subpage">
+        <div class="grid grid-2">
+          <div class="card">
+            <h3 style="margin-bottom:4px;">Faturamento semanal</h3>
+            <p style="color:var(--muted); font-size:12px; margin-bottom:14px;">Entradas por semana (segunda a domingo), com crescimento em relação à semana anterior.</p>
+            <div id="grafico-semanal"></div>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom:4px;">Faturamento mensal</h3>
+            <p style="color:var(--muted); font-size:12px; margin-bottom:14px;">Entradas por mês, com crescimento em relação ao mês anterior.</p>
+            <div id="grafico-mensal"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="caixa-view-operador" class="subpage">
+        <div class="card">
+          <h3 style="margin-bottom:4px;">Caixa por operador</h3>
+          <p style="color:var(--muted); font-size:12px; margin-bottom:14px;">Entradas, saídas e saldo movimentados por cada funcionário atribuído aos pedidos/lançamentos.</p>
+          <div id="caixa-operador-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ ESTOQUE ============ -->
+    <section id="page-estoque" class="page">
+      <div class="page-header">
+        <div>
+          <h2>Estoque</h2>
+          <p>Controle de ingredientes e insumos.</p>
+        </div>
+        <div class="field" style="flex-direction:row; gap:10px; align-items:center;">
+          <button class="btn secondary" id="btn-compras">Histórico de compras <span id="badge-compras" class="badge-alert" style="display:none;"></span></button>
+          <button class="btn secondary" id="btn-perdas">Perdas / Desperdício <span id="badge-perdas" class="badge-alert" style="display:none;"></span></button>
+        </div>
+      </div>
+
+      <div id="alerta-estoque-baixo" class="alert-banner" style="display:none;"></div>
+
+      <div class="card" style="margin-bottom:20px;">
+        <h3 style="margin-bottom:10px;">Novo item</h3>
+        <div class="inline-form">
+          <div class="field" style="flex:2;">
+            <label>Nome</label>
+            <input id="es-nome" type="text" placeholder="Ex: Espeto de Frango" />
+          </div>
+          <div class="field">
+            <label>Unidade</label>
+            <input id="es-unidade" type="text" placeholder="un, kg..." />
+          </div>
+          <div class="field">
+            <label>Quantidade</label>
+            <input id="es-quantidade" type="number" min="0" step="0.5" />
+          </div>
+          <div class="field">
+            <label>Mínimo</label>
+            <input id="es-minimo" type="number" min="0" step="0.5" />
+          </div>
+          <div class="field">
+            <label>Custo unit. (R$)</label>
+            <input id="es-custo" type="number" min="0" step="0.01" placeholder="Ex: 5,00" />
+          </div>
+          <div class="field" style="flex:0;">
+            <button class="btn" id="btn-add-estoque">Adicionar</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="estoque-list"></div>
+    </section>
+
+    <!-- ============ ENTREGA ============ -->
+    <section id="page-entrega" class="page">
+      <div class="page-header">
+        <div>
+          <h2>Entrega</h2>
+          <p>Bairros, entregadores/motoboys e tempo médio de entrega.</p>
+        </div>
+        <div class="field" style="flex-direction:row;">
+          <button class="btn secondary" id="btn-entregas">Histórico de entregas</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px;">
+        <h3 style="margin-bottom:4px;">Bairros de entrega</h3>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:14px;">Cadastre a taxa de entrega fixa de cada bairro. No cardápio, o cliente escolhe o bairro e a taxa é preenchida automaticamente.</p>
+        <div class="inline-form" style="margin-bottom:16px;">
+          <div class="field" style="flex:2;">
+            <label>Bairro</label>
+            <input id="brr-nome" type="text" placeholder="Ex: Centro" />
+          </div>
+          <div class="field">
+            <label>Taxa (R$)</label>
+            <input id="brr-taxa" type="number" min="0" step="0.5" placeholder="Ex: 5,00" />
+          </div>
+          <div class="field" style="flex:0;">
+            <button class="btn" id="btn-add-bairro">Adicionar</button>
+          </div>
+        </div>
+        <div id="bairros-list"></div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px;">
+        <h3 style="margin-bottom:4px;">Entregadores</h3>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:14px;">Cadastre os entregadores (motoboys) para atribuir a cada pedido de entrega.</p>
+        <div class="inline-form" style="margin-bottom:16px;">
+          <div class="field" style="flex:2;">
+            <label>Nome</label>
+            <input id="ent-nome" type="text" placeholder="Ex: João" />
+          </div>
+          <div class="field">
+            <label>Telefone (opcional)</label>
+            <input id="ent-telefone" type="text" placeholder="(00) 00000-0000" />
+          </div>
+          <div class="field" style="flex:0;">
+            <button class="btn" id="btn-add-entregador">Adicionar</button>
+          </div>
+        </div>
+        <div id="entregadores-list"></div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px;">
+        <h3 style="margin-bottom:10px;">Tempo médio de entrega</h3>
+        <div id="tempo-entrega-info"></div>
+      </div>
+    </section>
+
+    <!-- ============ COLABORADORES ============ -->
+    <section id="page-colaboradores" class="page">
+      <div class="page-header">
+        <div>
+          <h2>Colaboradores</h2>
+          <p>Funcionários, escala e ponto.</p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px;">
+        <h3 style="margin-bottom:4px;">Funcionários</h3>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:14px;">Cadastre a equipe (cozinha, atendimento, etc.).</p>
+        <div class="inline-form" style="margin-bottom:16px;">
+          <div class="field" style="flex:2;">
+            <label>Nome</label>
+            <input id="func-nome" type="text" placeholder="Ex: Maria" />
+          </div>
+          <div class="field">
+            <label>Função</label>
+            <input id="func-cargo" type="text" placeholder="Ex: Cozinha, Atendimento" />
+          </div>
+          <div class="field">
+            <label>Telefone (opcional)</label>
+            <input id="func-telefone" type="text" placeholder="(00) 00000-0000" />
+          </div>
+          <div class="field" style="flex:0;">
+            <button class="btn" id="btn-add-funcionario">Adicionar</button>
+          </div>
+        </div>
+        <div id="funcionarios-list"></div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px;">
+        <h3 style="margin-bottom:4px;">Escala de funcionários</h3>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:14px;">Marque os dias da semana e o horário de trabalho de cada funcionário ativo.</p>
+        <div id="escala-list"></div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px;">
+        <h3 style="margin-bottom:4px;">Registro de entrada e saída</h3>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:14px;">Entrada registrada automaticamente no primeiro login do dia. Saída registrada quando o dia é finalizado (última saída do dia).</p>
+        <div id="ponto-list"></div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px;">
+        <h3 style="margin-bottom:4px;">Usuários do sistema</h3>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:14px;">Cadastre quem pode acessar o painel e qual papel cada um tem. "Funcionário" só acessa a aba Pedidos. Vincule a um funcionário para registrar o ponto automaticamente.</p>
+        <div class="inline-form" style="margin-bottom:16px;">
+          <div class="field" style="flex:2;">
+            <label>Nome</label>
+            <input id="usr-nome" type="text" placeholder="Ex: João" />
+          </div>
+          <div class="field">
+            <label>Papel</label>
+            <select id="usr-papel">
+              <option value="dono">Dono</option>
+              <option value="funcionario">Funcionário</option>
+            </select>
+          </div>
+          <div class="field" id="campo-usr-funcionario">
+            <label>Funcionário (ponto)</label>
+            <select id="usr-funcionario">
+              <option value="">Nenhum</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>PIN</label>
+            <input id="usr-pin" type="text" inputmode="numeric" placeholder="Ex: 1234" maxlength="6" />
+          </div>
+          <div class="field" style="flex:0;">
+            <button class="btn" id="btn-add-usuario">Adicionar</button>
+          </div>
+        </div>
+        <div id="usuarios-list"></div>
+      </div>
+    </section>
+
+    <!-- ============ HISTORICO DE CLIENTES ============ -->
+    <section id="page-historico" class="page">
+      <div class="page-header">
+        <div>
+          <h2>Histórico de Clientes</h2>
+          <p>Pedidos anteriores agrupados por cliente. Cortesia a cada R$ 500,00 em compras.</p>
+        </div>
+        <div class="field">
+          <input id="busca-cliente" type="text" placeholder="Buscar por nome ou telefone" />
+        </div>
+      </div>
+
+      <div class="inline-form" style="margin-bottom:20px;">
+        <div class="field">
+          <label>De</label>
+          <input id="historico-data-inicio" type="date" />
+        </div>
+        <div class="field">
+          <label>Até</label>
+          <input id="historico-data-fim" type="date" />
+        </div>
+        <div class="field" style="flex:0;">
+          <button class="btn secondary" id="btn-limpar-filtro-data">Limpar período</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px;">
+        <h3 style="margin-bottom:10px;">Ranking de Clientes</h3>
+        <div id="ranking-clientes"></div>
+      </div>
+
+      <div class="section-title">Todos os clientes</div>
+      <div id="historico-list" class="scroll-list"></div>
+
+      <div class="card" style="margin-top:20px; margin-bottom:20px;">
+        <h3 style="margin-bottom:4px;">Clientes inativos</h3>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:14px;">Clientes sem nenhum pedido há mais de 45 dias.</p>
+        <div id="clientes-inativos-list"></div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px;">
+        <h3 style="margin-bottom:10px;">Aniversariantes do mês</h3>
+        <div id="aniversariantes-list"></div>
+      </div>
+    </section>
+
+    <!-- ============ MODAL: DETALHE DO CLIENTE ============ -->
+    <div class="modal-overlay" id="cliente-modal-overlay" style="display:none;">
+      <div class="modal">
+        <button class="modal-close" id="cliente-modal-close" aria-label="Fechar">×</button>
+        <div id="cliente-modal-content"></div>
+      </div>
+    </div>
+
+    <!-- ============ RELATORIOS (DONO) ============ -->
+    <section id="page-relatorios" class="page">
+      <div class="page-header">
+        <div>
+          <h2>Relatórios</h2>
+          <p>Análises de vendas e desempenho do negócio.</p>
+        </div>
+      </div>
+
+      <div class="grid grid-2" style="align-items:start;">
+        <div class="card">
+          <h3 style="margin-bottom:4px;">Mais vendidos</h3>
+          <p style="color:var(--muted); font-size:12px; margin-bottom:14px;">Produtos com maior quantidade vendida.</p>
+          <div id="relatorio-mais-vendidos"></div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:4px;">Menos vendidos</h3>
+          <p style="color:var(--muted); font-size:12px; margin-bottom:14px;">Produtos com menor quantidade vendida (inclui os que nunca venderam).</p>
+          <div id="relatorio-menos-vendidos"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <h3 style="margin-bottom:4px;">Horário de maior movimento</h3>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:14px;">Horários do dia com mais pedidos.</p>
+        <div id="relatorio-horario-movimento"></div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <h3 style="margin-bottom:4px;">Dia da semana mais lucrativo</h3>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:14px;">Faturamento total por dia da semana.</p>
+        <div id="relatorio-dia-semana"></div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <h3 style="margin-bottom:4px;">Margem de lucro por produto</h3>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:14px;">Preço de venda, custo e margem de cada item do cardápio.</p>
+        <div id="relatorio-margem-produto"></div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <h3 style="margin-bottom:4px;">Lucro por categoria</h3>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:14px;">Faturamento e lucro real das vendas, agrupados por categoria do cardápio.</p>
+        <div id="relatorio-lucro-categoria"></div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <h3 style="margin-bottom:4px;">Curva ABC</h3>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:14px;">Classificação dos produtos pelo faturamento acumulado (A = mais importantes, C = menos importantes).</p>
+        <div id="relatorio-curva-abc"></div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <h3 style="margin-bottom:4px;">Vendas por forma de pagamento</h3>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:14px;">Faturamento e quantidade de pedidos por forma de pagamento.</p>
+        <div id="relatorio-forma-pagamento"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="footer-note">BXD · Dados sincronizados na nuvem</div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

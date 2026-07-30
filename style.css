@@ -1,0 +1,1130 @@
+/* ===================================================
+   BXD - Gerenciador de Espetos
+   Estilo baseado no Kian Shows: minimalista, fundo
+   branco/cinza clarinho, fontes escuras, cards com
+   cantos arredondados, badges suaves.
+   =================================================== */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --white: #ffffff;
+  --bg: #f9f9f9;
+  --border: #e8e8e8;
+  --text: #1a1a1a;
+  --muted: #888888;
+  --accent: #3a3a3a;
+
+  --green-bg: #e6f4ea; --green-text: #2e7d50;
+  --yellow-bg: #fff8e1; --yellow-text: #b07d10;
+  --purple-bg: #f0ebff; --purple-text: #6c3fc9;
+  --red-bg: #fdecea; --red-text: #c0392b;
+  --blue-bg: #eaf1fd; --blue-text: #2563eb;
+
+  /* mantidos por compatibilidade semântica */
+  --black: var(--text);
+  --danger: var(--red-text);
+  --success: var(--green-text);
+
+  --radius: 7px;
+  --radius-lg: 10px;
+  --radius-pill: 20px;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  margin: 0 0 4px 0;
+}
+
+a { color: var(--text); }
+
+button { font-family: inherit; cursor: pointer; }
+
+/* ---------- App shell ---------- */
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.brand {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  color: var(--text);
+}
+
+.brand span {
+  font-weight: 400;
+  letter-spacing: normal;
+  color: var(--muted);
+  margin-left: 10px;
+  font-size: 13px;
+}
+
+nav.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 32px;
+}
+
+nav.tabs button {
+  background: none;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  transition: all .15s;
+}
+
+nav.tabs button:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+nav.tabs button.active {
+  background: var(--bg);
+  color: var(--text);
+  font-weight: 700;
+}
+
+main {
+  flex: 1;
+  padding: 32px;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.page { display: none; }
+.page.active { display: block; }
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 20px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.page-header h2 {
+  font-size: 20px;
+}
+
+.page-header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ---------- Generic components ---------- */
+
+.card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px 22px;
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+}
+
+.grid-2 { grid-template-columns: 1fr 1fr; }
+.grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+@media (max-width: 800px) {
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+}
+
+label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+  margin-bottom: 5px;
+  margin-top: 12px;
+}
+
+label.checkbox-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--text);
+}
+
+label.checkbox-line input[type="checkbox"] {
+  width: auto;
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 13px;
+  background: var(--white);
+  color: var(--text);
+  font-family: inherit;
+  transition: border .15s;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #aaa;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: var(--text);
+  color: var(--white);
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--radius);
+  transition: all .15s;
+}
+
+.btn:hover { background: #333; }
+
+.btn.secondary {
+  background: var(--white);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn.secondary:hover { background: var(--bg); }
+
+.btn.danger {
+  background: var(--red-bg);
+  color: var(--red-text);
+  border: 1px solid #f5c6c3;
+}
+
+.btn.danger:hover { background: #fad3d1; }
+
+/* ---------- Alerta de estoque baixo ---------- */
+
+.badge-alert {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--red-text);
+  color: var(--white);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.alert-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--red-bg);
+  color: var(--red-text);
+  border: 1px solid #f5c6c3;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 20px;
+}
+
+.btn.small {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+td {
+  text-align: left;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: middle;
+}
+
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #fafafa; }
+
+/* Caixa e Estoque usam <table> solta dentro destes containers;
+   aplicamos o "table-wrap" do Kian diretamente neles. */
+#caixa-list, #estoque-list {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  background: var(--bg);
+  color: var(--muted);
+}
+
+.tag.aberto { background: var(--yellow-bg); color: var(--yellow-text); }
+.tag.aguardando_motoboy { background: var(--blue-bg); color: var(--blue-text); }
+.tag.aguardando_balcao { background: var(--purple-bg); color: var(--purple-text); }
+.tag.entregue { background: var(--green-bg); color: var(--green-text); }
+.tag.pago { background: var(--green-bg); color: var(--green-text); }
+.tag.pendente { background: var(--yellow-bg); color: var(--yellow-text); }
+.tag.baixo { background: var(--red-bg); color: var(--red-text); }
+
+.tag.up { background: var(--green-bg); color: var(--green-text); }
+.tag.down { background: var(--red-bg); color: var(--red-text); }
+
+.tag.cortesia {
+  background: var(--text);
+  color: var(--white);
+  font-weight: 600;
+}
+
+.tag.vip {
+  background: var(--white);
+  border: 1.5px solid var(--text);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.tag.pontos {
+  background: var(--bg);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.tag.cashback {
+  background: var(--text);
+  color: var(--white);
+  font-weight: 600;
+}
+
+.tag.aniversario {
+  background: var(--bg);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.tag.inativo {
+  background: var(--white);
+  border: 1px dashed var(--muted);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.btn-toggle-vip {
+  margin-left: 8px;
+}
+
+.empty {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 40px 0;
+  text-align: center;
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--muted);
+  margin: 26px 0 10px 0;
+}
+
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 1000px) {
+  .stat-row { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 800px) {
+  .stat-row { grid-template-columns: 1fr; }
+}
+
+.stat {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px 22px;
+}
+
+.stat .label {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.stat .value {
+  font-size: 20px;
+  font-weight: 300;
+  letter-spacing: -0.3px;
+}
+
+.stat .stat-sub {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* ---------- Cardapio / pedido (cliente) ---------- */
+
+.menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.menu-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.menu-item .info strong {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.menu-item .info .desc {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.menu-item .price {
+  font-weight: 600;
+  margin-right: 16px;
+  min-width: 70px;
+  text-align: right;
+}
+
+.qty-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qty-control button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  border-radius: 5px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--muted);
+  transition: all .15s;
+}
+
+.qty-control button:hover {
+  background: var(--bg);
+  color: var(--text);
+  border-color: #ccc;
+}
+
+.qty-control span {
+  min-width: 18px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.cart-box {
+  position: sticky;
+  top: 16px;
+}
+
+.cart-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--bg);
+}
+
+.cart-total {
+  display: flex;
+  justify-content: space-between;
+  font-size: 16px;
+  font-weight: 600;
+  padding-top: 10px;
+  margin-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text);
+  color: var(--white);
+  padding: 12px 20px;
+  font-size: 13px;
+  border-radius: var(--radius);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 50;
+}
+
+.toast.show { opacity: 1; }
+
+.order-detail {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  margin-bottom: 12px;
+}
+
+.order-detail .top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+  gap: 12px;
+}
+
+.order-detail .meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.order-items {
+  font-size: 13px;
+  margin: 8px 0;
+}
+
+.order-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.inline-form {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.inline-form .field { flex: 1; min-width: 140px; }
+
+.customer-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  margin-bottom: 12px;
+}
+
+.customer-card .name {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.customer-card .sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.scroll-list {
+  max-height: 480px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+  padding: 10px;
+}
+
+.scroll-list .pedido-compact-card {
+  margin-bottom: 8px;
+}
+
+.scroll-list .pedido-compact-card:last-child {
+  margin-bottom: 0;
+}
+
+.courtesy-progress {
+  margin-top: 12px;
+}
+
+.courtesy-progress .track {
+  height: 6px;
+  background: var(--bg);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.courtesy-progress .fill {
+  height: 100%;
+  background: var(--text);
+}
+
+.courtesy-progress .label {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* ---------- Ranking de clientes (gráfico de barras) ---------- */
+
+.ranking-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.ranking-row.ranking-row-bar {
+  grid-template-columns: 26px 160px 1fr 90px;
+}
+
+.ranking-row:last-child { border-bottom: none; }
+
+.ranking-row .pos {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.ranking-row .nome {
+  font-size: 13px;
+  font-weight: 500;
+  min-width: 0;
+}
+
+.ranking-row:not(.ranking-row-bar) .nome {
+  white-space: normal;
+  word-break: break-word;
+}
+
+.ranking-row.ranking-row-bar .nome {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ranking-row .bar-track {
+  height: 14px;
+  background: var(--bg);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.ranking-row .bar-fill {
+  height: 100%;
+  background: var(--text);
+}
+
+.ranking-row .valor {
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+}
+
+@media (max-width: 700px) {
+  .ranking-row.ranking-row-bar { grid-template-columns: 20px 100px 1fr 74px; }
+  .ranking-row:not(.ranking-row-bar) {
+    grid-template-columns: 1fr;
+    justify-items: start;
+    gap: 2px;
+  }
+  .ranking-row:not(.ranking-row-bar) .valor { text-align: left; }
+}
+
+/* ---------- Pedidos: 4 cards por status (Kanban), mesmo estilo entre si ---------- */
+
+.pedidos-board {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1200px) {
+  .pedidos-board {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .pedidos-board {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Cada coluna de status usa a mesma classe .card do resto do app,
+   então "Em aberto", "Aguardando retirada" e "Finalizados" ficam
+   visualmente idênticos entre si. */
+.pedidos-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pedidos-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pedidos-group-header h3 {
+  font-size: 14px;
+  margin: 0;
+}
+
+.count-badge {
+  background: var(--bg);
+  color: var(--muted);
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 8px;
+}
+
+.pedidos-compact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pedido-compact-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+
+.pedido-compact-card .row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pedido-compact-card .numero {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.pedido-compact-card .valor {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pedido-compact-card .nome {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pedido-compact-card .meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.pedido-compact-card .tags-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pedido-compact-card .btn {
+  margin-top: 4px;
+  width: 100%;
+  justify-content: center;
+}
+
+.empty.small {
+  padding: 16px 0;
+  font-size: 12px;
+}
+
+/* ---------- Modal de detalhe do pedido ---------- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+}
+
+.modal {
+  position: relative;
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  padding: 24px;
+  width: 100%;
+  max-width: 460px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--muted);
+  padding: 4px;
+}
+
+.modal-close:hover { color: var(--text); }
+
+.modal-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 4px;
+  padding-right: 24px;
+}
+
+.numero-grande {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* ---------- Sub-abas (ex: Lançamentos / Gráficos dentro do Fluxo de Caixa) ---------- */
+
+.subtabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
+.subtabs button {
+  background: none;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+  transition: all .15s;
+}
+
+.subtabs button:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.subtabs button.active {
+  background: var(--bg);
+  color: var(--text);
+  font-weight: 500;
+}
+
+.subpage { display: none; }
+.subpage.active { display: block; }
+
+/* ---------- Gráficos de faturamento (semanal / mensal) ---------- */
+
+.faturamento-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.faturamento-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 130px;
+  align-items: center;
+  gap: 12px;
+}
+
+.faturamento-row .periodo {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.faturamento-row .bar-track {
+  height: 14px;
+  background: var(--bg);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.faturamento-row .bar-fill {
+  height: 100%;
+  background: var(--text);
+}
+
+.faturamento-row .valores {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.faturamento-row .valor {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .faturamento-row {
+    grid-template-columns: 82px 1fr 96px;
+  }
+}
+
+.footer-note {
+  text-align: center;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 18px;
+}
+
+/* ===================================================
+   Cardápio do cliente (cardapio.html) — visual colorido
+   e mais convidativo, só nesta página. O painel do dono
+   (index.html) reaproveita as mesmas classes (.menu-item,
+   .cart-box, .btn etc.) para o pedido de balcão/mesa e
+   continua minimalista, porque nada aqui se aplica sem a
+   classe "cardapio-client" no <body>.
+   =================================================== */
+
+body.cardapio-client {
+  --c-primary: #e8590c;
+  --c-primary-dark: #c2410c;
+  --c-primary-light: #ffe4cc;
+  --c-cream: #fff8f2;
+  --c-green: #2f9e44;
+  --c-warm-text: #3a2415;
+  background: var(--c-cream);
+}
+
+body.cardapio-client .topbar {
+  background: linear-gradient(120deg, var(--c-primary) 0%, #ff8a3d 100%);
+  border-bottom: none;
+  box-shadow: 0 2px 10px rgba(232, 89, 12, 0.25);
+}
+
+body.cardapio-client .brand,
+body.cardapio-client .brand span {
+  color: var(--white);
+}
+
+body.cardapio-client .brand span {
+  opacity: 0.9;
+}
+
+body.cardapio-client .page-header h2 {
+  color: var(--c-primary-dark);
+  font-size: 22px;
+}
+
+body.cardapio-client .page-header p {
+  color: #a5714a;
+}
+
+body.cardapio-client .card {
+  border-color: #f3e2d3;
+}
+
+body.cardapio-client #acompanhar-pedido {
+  border-color: var(--c-primary-light);
+}
+
+body.cardapio-client .section-title {
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--c-primary-dark);
+  margin: 26px 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--c-primary-light);
+}
+
+body.cardapio-client .menu-item {
+  background: var(--white);
+  border: 1px solid #f3e2d3;
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  transition: box-shadow .15s, border-color .15s, background .15s;
+}
+
+body.cardapio-client .menu-item:hover {
+  box-shadow: 0 4px 14px rgba(232, 89, 12, 0.12);
+}
+
+body.cardapio-client .menu-item.tem-qtd {
+  border-color: var(--c-primary);
+  background: var(--c-primary-light);
+}
+
+body.cardapio-client .menu-item .info strong {
+  font-size: 15px;
+  color: var(--c-warm-text);
+}
+
+body.cardapio-client .menu-item .price {
+  color: var(--c-primary-dark);
+  font-weight: 700;
+}
+
+body.cardapio-client .qty-control button {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--c-primary);
+  color: var(--white);
+  border: none;
+  font-size: 17px;
+}
+
+body.cardapio-client .qty-control button:hover {
+  background: var(--c-primary-dark);
+}
+
+body.cardapio-client .qty-control span {
+  font-weight: 700;
+  min-width: 22px;
+  color: var(--c-warm-text);
+}
+
+body.cardapio-client .cart-box {
+  border: 2px solid var(--c-primary-light);
+  box-shadow: 0 6px 20px rgba(232, 89, 12, 0.08);
+}
+
+body.cardapio-client .cart-box h3 {
+  color: var(--c-primary-dark);
+}
+
+body.cardapio-client .cart-total {
+  border-top: 2px dashed var(--c-primary-light);
+}
+
+body.cardapio-client .cart-total span:last-child {
+  color: var(--c-green);
+  font-size: 18px;
+}
+
+body.cardapio-client #btn-enviar-pedido {
+  background: linear-gradient(120deg, var(--c-primary) 0%, #ff7a2e 100%);
+  font-size: 15px;
+  font-weight: 700;
+  padding: 12px 16px;
+  box-shadow: 0 6px 16px rgba(232, 89, 12, 0.3);
+}
+
+body.cardapio-client #btn-enviar-pedido:hover {
+  background: linear-gradient(120deg, var(--c-primary-dark) 0%, var(--c-primary) 100%);
+}
+
+body.cardapio-client .footer-note {
+  color: #b98454;
+}
+
+body.cardapio-client .toast {
+  background: var(--c-primary-dark);
+}
+
+@media (max-width: 800px) {
+  body.cardapio-client .cart-box {
+    position: static;
+  }
+}
