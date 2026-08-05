@@ -27,6 +27,13 @@ const FIREBASE_CONFIG = {
 const FIRESTORE_COLLECTION = "bxd";
 const FIRESTORE_DOC = "dados";
 
+// Pagamento via Pix no cardápio do cliente (cardapio.html).
+// Código "copia e cola" (BR Code) da chave Pix cadastrada no PagSeguro.
+const PIX_BRCODE =
+  "00020126580014br.gov.bcb.pix0136af05da28-4252-4cb3-bd37-0fe394db257427600016BR.COM.PAGSEGURO01365AD1CA6C-CA69-4524-A028-71FB2B1573EC5204549953039865802BR5923MATHEUS MACIEL BALDIBIA6012Praia Grande62290525PAGS0000000002608041702686304C209";
+// Link para o cliente enviar o comprovante de pagamento no WhatsApp.
+const WHATSAPP_COMPROVANTE_LINK = "https://wa.me/message/IJNY7MZCL6WVH1";
+
 let firebaseDb = null;
 let firebaseReady = false;
 
@@ -1806,6 +1813,8 @@ function renderAcompanhamentoPedido() {
   ];
   const idxAtual = passos.findIndex((p) => p.key === order.status);
 
+  const mostrarPix = order.customer.pagamento === "pix" && !order.pago;
+
   container.innerHTML = `
     <div class="ranking-list">
       ${passos
@@ -1821,7 +1830,59 @@ function renderAcompanhamentoPedido() {
     <p style="margin-top:12px; color:var(--muted); font-size:13px;">
       Pedido nº ${order.numero} — ${STATUS_LABEL[order.status]}${order.entregadorNome ? " · Entregador: " + order.entregadorNome : ""}
     </p>
+    ${
+      mostrarPix
+        ? `
+    <div class="card" id="pix-pagamento-box" style="margin-top:16px;">
+      <h3>Pagamento via Pix</h3>
+      <p style="color:var(--muted); font-size:13px; margin-bottom:12px;">
+        Escaneie o QR Code ou copie o código abaixo para pagar ${fmtMoney(order.total)}. Depois, envie o comprovante no WhatsApp.
+      </p>
+      <div id="pix-qrcode-canvas" style="display:flex; justify-content:center; margin-bottom:12px;"></div>
+      <button class="btn secondary" id="btn-copiar-pix" type="button" style="width:100%;">Copiar código Pix</button>
+      <a class="btn" id="btn-comprovante-whats" href="${WHATSAPP_COMPROVANTE_LINK}" target="_blank" rel="noopener"
+         style="display:block; text-align:center; width:100%; margin-top:8px; text-decoration:none;">
+        Enviar comprovante no WhatsApp
+      </a>
+    </div>
+    `
+        : ""
+    }
   `;
+
+  if (mostrarPix) {
+    renderPixQRCode();
+    const btnCopiar = document.getElementById("btn-copiar-pix");
+    if (btnCopiar) {
+      btnCopiar.addEventListener("click", () => {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard
+            .writeText(PIX_BRCODE)
+            .then(() => toast("Código Pix copiado!"))
+            .catch(() => toast("Não foi possível copiar. Copie manualmente."));
+        } else {
+          toast("Não foi possível copiar. Copie manualmente.");
+        }
+      });
+    }
+  }
+}
+
+function renderPixQRCode() {
+  const el = document.getElementById("pix-qrcode-canvas");
+  if (!el) return;
+  el.innerHTML = "";
+  if (typeof QRCode === "undefined") {
+    el.innerHTML = `<p style="color:var(--muted); font-size:12px;">Não foi possível carregar o QR Code. Use o código copiado.</p>`;
+    return;
+  }
+  new QRCode(el, {
+    text: PIX_BRCODE,
+    width: 200,
+    height: 200,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+  });
 }
 
 function enviarPedido() {
