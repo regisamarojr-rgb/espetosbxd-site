@@ -34,6 +34,47 @@ const PIX_BRCODE =
 // Link para o cliente enviar o comprovante de pagamento no WhatsApp.
 const WHATSAPP_COMPROVANTE_LINK = "https://wa.me/message/IJNY7MZCL6WVH1";
 
+// ---- Geração do BR Code (Pix "copia e cola") já com o valor do pedido ----
+// O código cadastrado (PIX_BRCODE) é "valor livre" (não tem o campo 54).
+// Essas funções reescrevem o payload EMV inserindo o valor exato do pedido
+// e recalculando o CRC16, para o cliente não precisar digitar o valor.
+function crc16ccitt(str) {
+  let crc = 0xffff;
+  for (let c = 0; c < str.length; c++) {
+    crc ^= str.charCodeAt(c) << 8;
+    for (let i = 0; i < 8; i++) {
+      crc = (crc & 0x8000) !== 0 ? (crc << 1) ^ 0x1021 : crc << 1;
+      crc &= 0xffff;
+    }
+  }
+  return crc.toString(16).toUpperCase().padStart(4, "0");
+}
+
+function parsePixTLV(payload) {
+  const fields = [];
+  let i = 0;
+  while (i < payload.length) {
+    const id = payload.substr(i, 2);
+    const len = parseInt(payload.substr(i + 2, 2), 10);
+    const value = payload.substr(i + 4, len);
+    fields.push({ id, value });
+    i += 4 + len;
+  }
+  return fields;
+}
+
+function buildPixTLV(fields) {
+  return fields.map((f) => f.id + String(f.value.length).padStart(2, "0") + f.value).join("");
+}
+
+function gerarPixComValor(basePayload, valor) {
+  let fields = parsePixTLV(basePayload).filter((f) => f.id !== "63" && f.id !== "54");
+  fields.push({ id: "54", value: Number(valor).toFixed(2) });
+  fields.sort((a, b) => a.id.localeCompare(b.id));
+  const semCrc = buildPixTLV(fields) + "6304";
+  return semCrc + crc16ccitt(semCrc);
+}
+
 let firebaseDb = null;
 let firebaseReady = false;
 
@@ -1851,13 +1892,14 @@ function renderAcompanhamentoPedido() {
   `;
 
   if (mostrarPix) {
-    renderPixQRCode();
+    const pixPayload = gerarPixComValor(PIX_BRCODE, order.total);
+    renderPixQRCode(pixPayload);
     const btnCopiar = document.getElementById("btn-copiar-pix");
     if (btnCopiar) {
       btnCopiar.addEventListener("click", () => {
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard
-            .writeText(PIX_BRCODE)
+            .writeText(pixPayload)
             .then(() => toast("Código Pix copiado!"))
             .catch(() => toast("Não foi possível copiar. Copie manualmente."));
         } else {
@@ -1868,7 +1910,7 @@ function renderAcompanhamentoPedido() {
   }
 }
 
-function renderPixQRCode() {
+function renderPixQRCode(payload) {
   const el = document.getElementById("pix-qrcode-canvas");
   if (!el) return;
   el.innerHTML = "";
@@ -1877,7 +1919,7 @@ function renderPixQRCode() {
     return;
   }
   new QRCode(el, {
-    text: PIX_BRCODE,
+    text: payload,
     width: 200,
     height: 200,
     colorDark: "#000000",
