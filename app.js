@@ -1892,7 +1892,7 @@ function renderAcompanhamentoPedido() {
   `;
 
   if (mostrarPix) {
-    const pixPayload = gerarPixComValor(PIX_BRCODE, order.total);
+    const pixPayload = PIX_BRCODE;
     renderPixQRCode(pixPayload);
     const btnCopiar = document.getElementById("btn-copiar-pix");
     if (btnCopiar) {
