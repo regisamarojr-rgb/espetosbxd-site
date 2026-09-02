@@ -1885,6 +1885,13 @@ function renderAcompanhamentoPedido() {
          style="display:block; text-align:center; width:100%; margin-top:8px; text-decoration:none;">
         Enviar comprovante no WhatsApp
       </a>
+        <div id="comprovante-upload-area" style="margin-top:12px; border-top:1px solid var(--border); padding-top:12px;">
+          ${
+            order.comprovanteImg
+              ? `<p style="font-size:13px; color:var(--muted); margin-bottom:6px;">Comprovante enviado. Aguarde a conferência do dono.</p><img src="${order.comprovanteImg}" style="max-width:100%; border-radius:8px; display:block; margin:8px auto 0;">`
+              : `<p style="font-size:13px; color:var(--muted); margin-bottom:6px;">Ou anexe o print do comprovante aqui:</p><input type="file" id="input-comprovante" accept="image/*" style="width:100%;">`
+          }
+        </div>
     </div>
     `
         : ""
@@ -1907,7 +1914,43 @@ function renderAcompanhamentoPedido() {
         }
       });
     }
+  
+    const inputComprovante = document.getElementById("input-comprovante");
+    if (inputComprovante) {
+      inputComprovante.addEventListener("change", (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) handleComprovanteUpload(order.id, file);
+      });
+    }
   }
+}
+
+function handleComprovanteUpload(orderId, file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const maxWidth = 700;
+      const scale = Math.min(1, maxWidth / img.width);
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.55);
+
+      refreshDataFromStorage();
+      const order = DATA.orders.find((o) => o.id === orderId);
+      if (!order) return;
+      order.comprovanteImg = dataUrl;
+      order.comprovanteEnviadoEm = new Date().toISOString();
+      saveData();
+      toast("Comprovante enviado! Aguarde a conferência.");
+      renderAcompanhamentoPedido();
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 function renderPixQRCode(payload) {
@@ -2163,6 +2206,13 @@ function pedidoDetalheHtml(o) {
     <div class="order-items">${itemsHtml}</div>
     <div class="meta">${entregaInfo}</div>
     <div class="meta">Pagamento: ${pagInfo}</div>
+    ${
+      o.customer.pagamento === "pix"
+        ? o.comprovanteImg
+          ? `<div class="meta" style="margin-top:6px;"><strong>Comprovante:</strong><br><img src="${o.comprovanteImg}" style="max-width:100%; max-height:260px; border-radius:8px; margin-top:6px; display:block;"></div>`
+          : `<div class="meta" style="margin-top:6px; color:var(--muted);">Comprovante ainda não enviado.</div>`
+        : ""
+    }
     ${o.customer.obs ? `<div class="meta">Obs: ${o.customer.obs}</div>` : ""}
     ${
       o.customer.tipoEntrega === "entrega"
