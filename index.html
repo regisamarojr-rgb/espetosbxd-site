@@ -36,6 +36,7 @@
   <nav class="tabs">
     <button data-page="pedidos" class="active">Pedidos</button>
     <button data-page="caixa">Fluxo de Caixa</button>
+    <button data-page="gastos">Gastos Gerais</button>
     <button data-page="estoque">Estoque <span id="badge-estoque-baixo" class="badge-alert" style="display:none;"></span></button>
     <button data-page="entrega">Entrega</button>
     <button data-page="colaboradores">Colaboradores</button>
@@ -273,6 +274,72 @@
           <h3 style="margin-bottom:4px;">Caixa por operador</h3>
           <p style="color:var(--muted); font-size:12px; margin-bottom:14px;">Entradas, saídas e saldo movimentados por cada funcionário atribuído aos pedidos/lançamentos.</p>
           <div id="caixa-operador-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ GASTOS GERAIS ============ -->
+    <section id="page-gastos" class="page">
+      <div class="page-header">
+        <div>
+          <h2>Gastos Gerais</h2>
+          <p>Carvão, mercado, saco de lixo e outras despesas do dia a dia. Fica tudo salvo no histórico.</p>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat"><div class="label" id="gs-stat-total-label">Total do mês</div><div class="value" id="gs-stat-total">R$ 0,00</div></div>
+        <div class="stat"><div class="label">Lançamentos</div><div class="value" id="gs-stat-qtd">0</div></div>
+        <div class="stat"><div class="label">Maior gasto</div><div class="value" id="gs-stat-maior">—</div><div class="stat-sub" id="gs-stat-maior-sub"></div></div>
+        <div class="stat"><div class="label">Mês anterior</div><div class="value" id="gs-stat-ant">R$ 0,00</div><div class="stat-sub" id="gs-stat-ant-sub"></div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px;">
+        <h3 style="margin-bottom:10px;">Adicionar gasto</h3>
+        <div class="inline-form">
+          <div class="field">
+            <label for="gs-categoria">Categoria</label>
+            <select id="gs-categoria"></select>
+          </div>
+          <div class="field" style="flex:2;">
+            <label for="gs-descricao">Descrição (opcional)</label>
+            <input id="gs-descricao" type="text" placeholder="Ex: 2 sacos de carvão 5kg" />
+          </div>
+          <div class="field">
+            <label for="gs-valor">Valor (R$)</label>
+            <input id="gs-valor" type="number" min="0" step="0.01" inputmode="decimal" />
+          </div>
+          <div class="field">
+            <label for="gs-data">Data</label>
+            <input id="gs-data" type="date" />
+          </div>
+          <div class="field" style="flex:0;">
+            <button class="btn" id="btn-add-gasto">Adicionar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="gs-filtros">
+        <div class="field">
+          <label for="gs-filtro-mes">Mês</label>
+          <input id="gs-filtro-mes" type="month" />
+        </div>
+        <div class="field">
+          <label for="gs-filtro-cat">Categoria</label>
+          <select id="gs-filtro-cat"></select>
+        </div>
+        <button class="btn secondary small" id="gs-mes-ant">← Mês anterior</button>
+        <button class="btn secondary small" id="gs-mes-atual">Mês atual</button>
+      </div>
+
+      <div class="grid grid-2" style="align-items:start;">
+        <div class="card" style="min-width:0;">
+          <h3 style="margin-bottom:10px;">Lista de gastos</h3>
+          <div id="gastos-list" style="overflow-x:auto;"></div>
+        </div>
+        <div class="card" style="min-width:0;">
+          <h3 style="margin-bottom:10px;">Por categoria</h3>
+          <div id="gastos-por-categoria"></div>
         </div>
       </div>
     </section>

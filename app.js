@@ -122,6 +122,7 @@ function initFirebase() {
 function rerenderPaginaAtual() {
   if (document.getElementById("pedidos-list")) renderPedidos();
   if (document.getElementById("caixa-list")) renderCaixa();
+  if (document.getElementById("gastos-list")) renderGastos();
   if (document.getElementById("estoque-list")) renderEstoque();
   if (document.getElementById("historico-list")) renderHistorico();
   if (document.getElementById("menu-list")) renderCardapio();
@@ -207,8 +208,8 @@ function escalaVazia() {
 // "dono" tem acesso total; "funcionario" só acessa a aba de Pedidos (operação
 // do dia a dia), sem ver dados financeiros/estratégicos (Caixa, Estoque, Histórico).
 const PAPEIS_PERMISSOES = {
-  dono: { pedidos: true, caixa: true, estoque: true, entrega: true, colaboradores: true, historico: true, relatorios: true },
-  funcionario: { pedidos: true, caixa: false, estoque: false, entrega: false, colaboradores: false, historico: false, relatorios: false },
+  dono: { pedidos: true, caixa: true, gastos: true, estoque: true, entrega: true, colaboradores: true, historico: true, relatorios: true },
+  funcionario: { pedidos: true, caixa: false, gastos: false, estoque: false, entrega: false, colaboradores: false, historico: false, relatorios: false },
 };
 const PAPEL_LABEL = { dono: "Dono", funcionario: "Funcionário" };
 
@@ -297,6 +298,9 @@ function defaultData() {
     ],
     orders: [],
     cash: [],
+    // Gastos gerais do dia a dia (carvão, mercado, saco de lixo, diversos...).
+    // Cada gasto: { id, data: "aaaa-mm-dd", categoria, descricao, valor, createdAt }.
+    gastos: [],
     // Histórico de pedidos cancelados (motivo + snapshot do pedido no momento do cancelamento).
     cancelamentos: [],
     // Histórico de perdas/desperdício de estoque (quantidade + motivo), separado
@@ -415,6 +419,7 @@ ensureClientesVipField();
 ensureCashbackResgatesField();
 ensureClientesAniversariosField();
 ensureBairrosField();
+ensureGastosField();
 ensureEntregadoresField();
 ensureFuncionariosField();
 ensureEscalaFuncionarios();
@@ -1680,6 +1685,7 @@ function renderPage(pageId) {
   if (pageId === "cardapio") renderCardapio();
   if (pageId === "pedidos") renderPedidos();
   if (pageId === "caixa") renderCaixa();
+  if (pageId === "gastos") renderGastos();
   if (pageId === "estoque") renderEstoque();
   if (pageId === "entrega") renderEntrega();
   if (pageId === "colaboradores") renderColaboradores();
@@ -1691,6 +1697,7 @@ function renderAll() {
   renderCardapio();
   renderPedidos();
   renderCaixa();
+  renderGastos();
   renderEstoque();
   renderHistorico();
   renderRelatorios();
@@ -2606,6 +2613,158 @@ function postOrderToCash(order) {
     orderId: order.id,
     descricao: `Pedido de ${order.customer.nome} (${order.items.map((i) => i.qtd + "x " + i.nome).join(", ")})`,
     valor: order.total,
+  });
+}
+
+/* ===================================================
+   PAGINA: GASTOS GERAIS
+   Lista salva no DATA.gastos (localStorage + nuvem Firebase via saveData).
+   A lista e os cards mostram só o mês escolhido no filtro (mês atual ao abrir).
+   =================================================== */
+
+const GASTOS_CATEGORIAS = ["Carvão", "Mercado", "Saco de lixo", "Gás", "Limpeza", "Embalagens", "Diversos"];
+// Data local (fuso do aparelho), para um gasto lançado às 22h não cair no dia seguinte.
+function hojeLocalISO() {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+let GASTOS_FILTRO_MES = hojeLocalISO().slice(0, 7); // "aaaa-mm"
+let GASTOS_FILTRO_CAT = "";
+let GASTO_CONFIRMAR_ID = null;
+
+function ensureGastosField() {
+  if (!Array.isArray(DATA.gastos)) {
+    DATA.gastos = [];
+    saveData();
+  }
+}
+
+function mesAnterior(key) {
+  const [y, m] = key.split("-").map(Number);
+  const d = new Date(y, m - 2, 1);
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+}
+
+function adicionarGasto() {
+  const categoria = document.getElementById("gs-categoria").value;
+  const descricao = document.getElementById("gs-descricao").value.trim();
+  const valor = Number(String(document.getElementById("gs-valor").value).replace(",", "."));
+  const data = document.getElementById("gs-data").value || hojeLocalISO();
+  if (!valor || valor <= 0) {
+    toast("Informe o valor do gasto.");
+    return;
+  }
+  refreshDataFromStorage();
+  if (!Array.isArray(DATA.gastos)) DATA.gastos = [];
+  DATA.gastos.push({ id: uid("gst"), data, categoria, descricao, valor, createdAt: new Date().toISOString() });
+  saveData();
+  document.getElementById("gs-descricao").value = "";
+  document.getElementById("gs-valor").value = "";
+  // Mostra o mês do gasto que acabou de ser lançado.
+  GASTOS_FILTRO_MES = data.slice(0, 7);
+  toast("Gasto salvo.");
+  renderGastos();
+}
+
+function removerGasto(id) {
+  refreshDataFromStorage();
+  DATA.gastos = (DATA.gastos || []).filter((g) => g.id !== id);
+  saveData();
+  GASTO_CONFIRMAR_ID = null;
+  toast("Gasto removido.");
+  renderGastos();
+}
+
+function renderGastos() {
+  const container = document.getElementById("gastos-list");
+  if (!container) return;
+  const gastos = Array.isArray(DATA.gastos) ? DATA.gastos : [];
+
+  const filtroMes = document.getElementById("gs-filtro-mes");
+  if (filtroMes) filtroMes.value = GASTOS_FILTRO_MES;
+  const filtroCat = document.getElementById("gs-filtro-cat");
+  if (filtroCat) filtroCat.value = GASTOS_FILTRO_CAT;
+
+  const doMes = gastos.filter((g) => g.data.slice(0, 7) === GASTOS_FILTRO_MES);
+  const lista = doMes
+    .filter((g) => !GASTOS_FILTRO_CAT || g.categoria === GASTOS_FILTRO_CAT)
+    .slice()
+    .sort((a, b) => (b.data + b.createdAt).localeCompare(a.data + a.createdAt));
+
+  const totalMes = doMes.reduce((a, g) => a + g.valor, 0);
+  const totalAnt = gastos.filter((g) => g.data.slice(0, 7) === mesAnterior(GASTOS_FILTRO_MES)).reduce((a, g) => a + g.valor, 0);
+  const porCat = {};
+  doMes.forEach((g) => (porCat[g.categoria] = (porCat[g.categoria] || 0) + g.valor));
+  const cats = Object.entries(porCat).sort((a, b) => b[1] - a[1]);
+
+  const label = monthLabel(GASTOS_FILTRO_MES);
+  document.getElementById("gs-stat-total-label").textContent = "Total de " + label;
+  document.getElementById("gs-stat-total").textContent = fmtMoney(totalMes);
+  document.getElementById("gs-stat-qtd").textContent = doMes.length;
+  document.getElementById("gs-stat-maior").textContent = cats.length ? cats[0][0] : "—";
+  document.getElementById("gs-stat-maior-sub").textContent = cats.length ? fmtMoney(cats[0][1]) : "";
+  const diff = totalMes - totalAnt;
+  document.getElementById("gs-stat-ant").textContent = fmtMoney(totalAnt);
+  document.getElementById("gs-stat-ant-sub").textContent =
+    totalAnt > 0 ? (diff >= 0 ? "+" : "−") + fmtMoney(Math.abs(diff)).replace("R$ ", "R$ ") + " neste mês" : "Sem gastos no mês anterior";
+
+  const catBox = document.getElementById("gastos-por-categoria");
+  catBox.innerHTML = cats.length
+    ? cats
+        .map(
+          ([c, v]) => `
+      <div class="gs-cat-row">
+        <span class="gs-cat-nome">${c}</span>
+        <span class="gs-cat-barra"><span style="width:${Math.max(3, (v / cats[0][1]) * 100)}%"></span></span>
+        <span class="gs-cat-valor">${fmtMoney(v)}</span>
+      </div>`
+        )
+        .join("")
+    : `<div class="empty">Nenhum gasto em ${label}.</div>`;
+
+  if (lista.length === 0) {
+    container.innerHTML = `<div class="empty">${
+      doMes.length ? "Nenhum gasto dessa categoria em " + label + "." : "Nenhum gasto lançado em " + label + ". Use o formulário acima para adicionar o primeiro."
+    }</div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <table>
+      <thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th style="text-align:right;">Valor</th><th></th></tr></thead>
+      <tbody>
+        ${lista
+          .map(
+            (g) => `
+          <tr>
+            <td>${fmtDate(g.data)}</td>
+            <td><span class="tag">${g.categoria}</span></td>
+            <td>${g.descricao ? g.descricao.replace(/</g, "&lt;") : "<span style='color:var(--muted)'>—</span>"}</td>
+            <td style="text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums;">${fmtMoney(g.valor)}</td>
+            <td style="text-align:right; white-space:nowrap;">
+              ${
+                GASTO_CONFIRMAR_ID === g.id
+                  ? `<button class="btn small danger" data-gs="confirmar" data-id="${g.id}">Confirmar</button>
+                     <button class="btn small secondary" data-gs="cancelar">Não</button>`
+                  : `<button class="btn small secondary" data-gs="remover" data-id="${g.id}">Remover</button>`
+              }
+            </td>
+          </tr>`
+          )
+          .join("")}
+      </tbody>
+      <tfoot><tr><td colspan="3"><strong>${lista.length} gasto${lista.length > 1 ? "s" : ""}</strong></td>
+        <td style="text-align:right; white-space:nowrap;"><strong>${fmtMoney(lista.reduce((a, g) => a + g.valor, 0))}</strong></td><td></td></tr></tfoot>
+    </table>`;
+
+  container.querySelectorAll("button[data-gs]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const act = btn.dataset.gs;
+      if (act === "remover") GASTO_CONFIRMAR_ID = btn.dataset.id;
+      else if (act === "cancelar") GASTO_CONFIRMAR_ID = null;
+      else if (act === "confirmar") return removerGasto(btn.dataset.id);
+      renderGastos();
+    });
   });
 }
 
@@ -3959,6 +4118,34 @@ document.addEventListener("DOMContentLoaded", () => {
         if (btn.dataset.subpage === "graficos") renderGraficosCaixa();
         if (btn.dataset.subpage === "operador") renderCaixaPorOperador();
       });
+    });
+  }
+
+  // Gastos gerais (index.html - dono)
+  if (document.getElementById("btn-add-gasto")) {
+    document.getElementById("gs-categoria").innerHTML = GASTOS_CATEGORIAS.map((c) => `<option>${c}</option>`).join("");
+    document.getElementById("gs-filtro-cat").innerHTML =
+      `<option value="">Todas</option>` + GASTOS_CATEGORIAS.map((c) => `<option>${c}</option>`).join("");
+    document.getElementById("gs-data").value = hojeLocalISO();
+    document.getElementById("btn-add-gasto").addEventListener("click", adicionarGasto);
+    document.getElementById("gs-valor").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") adicionarGasto();
+    });
+    document.getElementById("gs-filtro-mes").addEventListener("change", (e) => {
+      if (e.target.value) GASTOS_FILTRO_MES = e.target.value;
+      renderGastos();
+    });
+    document.getElementById("gs-filtro-cat").addEventListener("change", (e) => {
+      GASTOS_FILTRO_CAT = e.target.value;
+      renderGastos();
+    });
+    document.getElementById("gs-mes-ant").addEventListener("click", () => {
+      GASTOS_FILTRO_MES = mesAnterior(GASTOS_FILTRO_MES);
+      renderGastos();
+    });
+    document.getElementById("gs-mes-atual").addEventListener("click", () => {
+      GASTOS_FILTRO_MES = hojeLocalISO().slice(0, 7);
+      renderGastos();
     });
   }
 
