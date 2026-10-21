@@ -1196,3 +1196,7 @@ body.cardapio-client .toast {
 .gs-cat-chip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 3px 6px 3px 10px; font-size: 12px; }
 .gs-cat-chip button { background: none; border: 0; color: var(--muted); font-size: 14px; line-height: 1; padding: 0 2px; }
 .gs-cat-chip button:hover { color: var(--text); }
+
+.gs-editando td { background: var(--bg); vertical-align: middle; }
+.gs-editando input, .gs-editando select { width: 100%; min-width: 90px; padding: 6px 8px; font-size: 13px; }
+.gs-editando .gs-e-valor { max-width: 110px; text-align: right; }

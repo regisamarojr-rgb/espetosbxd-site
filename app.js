@@ -2633,6 +2633,7 @@ function hojeLocalISO() {
 let GASTOS_FILTRO_MES = hojeLocalISO().slice(0, 7); // "aaaa-mm"
 let GASTOS_FILTRO_CAT = "";
 let GASTO_CONFIRMAR_ID = null;
+let GASTO_EDIT_ID = null; // gasto aberto para edição na lista
 
 function ensureGastosField() {
   let changed = false;
@@ -2749,6 +2750,38 @@ function adicionarGasto() {
   renderGastos();
 }
 
+function salvarEdicaoGasto(id) {
+  const linha = document.querySelector(`tr[data-gs-edit="${id}"]`);
+  if (!linha) return;
+  const data = linha.querySelector(".gs-e-data").value;
+  const categoria = linha.querySelector(".gs-e-cat").value;
+  const descricao = linha.querySelector(".gs-e-desc").value.trim();
+  const valor = Number(String(linha.querySelector(".gs-e-valor").value).replace(",", "."));
+  if (!data) {
+    toast("Informe a data do gasto.");
+    return;
+  }
+  if (!valor || valor <= 0) {
+    toast("Informe o valor do gasto.");
+    return;
+  }
+  refreshDataFromStorage();
+  const g = (DATA.gastos || []).find((x) => x.id === id);
+  if (!g) {
+    toast("Esse gasto não existe mais. Ele pode ter sido removido em outro aparelho.");
+    GASTO_EDIT_ID = null;
+    renderGastos();
+    return;
+  }
+  Object.assign(g, { data, categoria, descricao, valor, updatedAt: new Date().toISOString() });
+  saveData();
+  GASTO_EDIT_ID = null;
+  // Se a data mudou de mês, acompanha o gasto até o mês novo.
+  if (data.slice(0, 7) !== GASTOS_FILTRO_MES) GASTOS_FILTRO_MES = data.slice(0, 7);
+  toast("Gasto atualizado.");
+  renderGastos();
+}
+
 function removerGasto(id) {
   refreshDataFromStorage();
   DATA.gastos = (DATA.gastos || []).filter((g) => g.id !== id);
@@ -2816,8 +2849,26 @@ function renderGastos() {
       <thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th style="text-align:right;">Valor</th><th></th></tr></thead>
       <tbody>
         ${lista
-          .map(
-            (g) => `
+          .map((g) => {
+            if (GASTO_EDIT_ID === g.id) {
+              const escA = (t) => String(t || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+              const cats = categoriasGastos();
+              if (!cats.includes(g.categoria)) cats.push(g.categoria);
+              return `
+          <tr data-gs-edit="${g.id}" class="gs-editando">
+            <td><input class="gs-e-data" type="date" value="${g.data}" aria-label="Data" /></td>
+            <td><select class="gs-e-cat" aria-label="Categoria">${cats
+              .map((c) => `<option value="${escA(c)}"${c === g.categoria ? " selected" : ""}>${escA(c)}</option>`)
+              .join("")}</select></td>
+            <td><input class="gs-e-desc" type="text" value="${escA(g.descricao)}" placeholder="Descrição" aria-label="Descrição" /></td>
+            <td style="text-align:right;"><input class="gs-e-valor" type="number" min="0" step="0.01" inputmode="decimal" value="${g.valor}" aria-label="Valor" /></td>
+            <td style="text-align:right; white-space:nowrap;">
+              <button class="btn small" data-gs="salvar" data-id="${g.id}">Salvar</button>
+              <button class="btn small secondary" data-gs="cancelar-edit">Cancelar</button>
+            </td>
+          </tr>`;
+            }
+            return `
           <tr>
             <td>${fmtDate(g.data)}</td>
             <td><span class="tag">${g.categoria}</span></td>
@@ -2828,22 +2879,42 @@ function renderGastos() {
                 GASTO_CONFIRMAR_ID === g.id
                   ? `<button class="btn small danger" data-gs="confirmar" data-id="${g.id}">Confirmar</button>
                      <button class="btn small secondary" data-gs="cancelar">Não</button>`
-                  : `<button class="btn small secondary" data-gs="remover" data-id="${g.id}">Remover</button>`
+                  : `<button class="btn small secondary" data-gs="editar" data-id="${g.id}">Editar</button>
+                     <button class="btn small secondary" data-gs="remover" data-id="${g.id}">Remover</button>`
               }
             </td>
-          </tr>`
-          )
+          </tr>`;
+          })
           .join("")}
       </tbody>
       <tfoot><tr><td colspan="3"><strong>${lista.length} gasto${lista.length > 1 ? "s" : ""}</strong></td>
         <td style="text-align:right; white-space:nowrap;"><strong>${fmtMoney(lista.reduce((a, g) => a + g.valor, 0))}</strong></td><td></td></tr></tfoot>
     </table>`;
 
+  container.querySelectorAll("tr.gs-editando input").forEach((inp) =>
+    inp.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") salvarEdicaoGasto(inp.closest("tr").dataset.gsEdit);
+      if (e.key === "Escape") {
+        GASTO_EDIT_ID = null;
+        renderGastos();
+      }
+    })
+  );
+  const primeiroCampo = container.querySelector("tr.gs-editando .gs-e-desc");
+  if (primeiroCampo) primeiroCampo.focus();
+
   container.querySelectorAll("button[data-gs]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const act = btn.dataset.gs;
-      if (act === "remover") GASTO_CONFIRMAR_ID = btn.dataset.id;
-      else if (act === "cancelar") GASTO_CONFIRMAR_ID = null;
+      if (act === "remover") {
+        GASTO_CONFIRMAR_ID = btn.dataset.id;
+        GASTO_EDIT_ID = null;
+      } else if (act === "cancelar") GASTO_CONFIRMAR_ID = null;
+      else if (act === "editar") {
+        GASTO_EDIT_ID = btn.dataset.id;
+        GASTO_CONFIRMAR_ID = null;
+      } else if (act === "cancelar-edit") GASTO_EDIT_ID = null;
+      else if (act === "salvar") return salvarEdicaoGasto(btn.dataset.id);
       else if (act === "confirmar") return removerGasto(btn.dataset.id);
       renderGastos();
     });
