@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261020b" />
+<link rel="stylesheet" href="style.css?v=20261020c" />
 </head>
 <body class="gerenciador">
 <div class="app">
@@ -299,7 +299,10 @@
         <div class="inline-form">
           <div class="field">
             <label for="gs-categoria">Categoria</label>
-            <select id="gs-categoria"></select>
+            <div class="gs-cat-select">
+              <select id="gs-categoria"></select>
+              <button type="button" class="btn secondary small" id="btn-nova-cat" title="Criar nova categoria">+ Nova</button>
+            </div>
           </div>
           <div class="field" style="flex:2;">
             <label for="gs-descricao">Descrição (opcional)</label>
@@ -317,6 +320,15 @@
             <button class="btn" id="btn-add-gasto">Adicionar</button>
           </div>
         </div>
+        <div id="gs-nova-cat-box" class="gs-nova-cat" hidden>
+          <label for="gs-nova-cat">Nova categoria</label>
+          <div class="gs-nova-cat-linha">
+            <input id="gs-nova-cat" type="text" maxlength="40" placeholder="Ex: Manutenção, Aluguel, Bebidas" />
+            <button type="button" class="btn small" id="btn-salvar-cat">Salvar categoria</button>
+            <button type="button" class="btn secondary small" id="btn-cancelar-cat">Cancelar</button>
+          </div>
+        </div>
+        <div id="gs-cats-proprias" class="gs-cats-proprias"></div>
       </div>
 
       <div class="gs-filtros">
@@ -646,6 +658,6 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
-<script src="app.js?v=20261020b"></script>
+<script src="app.js?v=20261020c"></script>
 </body>
 </html>

@@ -301,6 +301,8 @@ function defaultData() {
     // Gastos gerais do dia a dia (carvão, mercado, saco de lixo, diversos...).
     // Cada gasto: { id, data: "aaaa-mm-dd", categoria, descricao, valor, createdAt }.
     gastos: [],
+    // Categorias de gasto criadas pelo dono, além das padrão (GASTOS_CATEGORIAS).
+    gastosCategorias: [],
     // Histórico de pedidos cancelados (motivo + snapshot do pedido no momento do cancelamento).
     cancelamentos: [],
     // Histórico de perdas/desperdício de estoque (quantidade + motivo), separado
@@ -2633,10 +2635,91 @@ let GASTOS_FILTRO_CAT = "";
 let GASTO_CONFIRMAR_ID = null;
 
 function ensureGastosField() {
+  let changed = false;
   if (!Array.isArray(DATA.gastos)) {
     DATA.gastos = [];
-    saveData();
+    changed = true;
   }
+  if (!Array.isArray(DATA.gastosCategorias)) {
+    DATA.gastosCategorias = [];
+    changed = true;
+  }
+  if (changed) saveData();
+}
+
+// Padrão + criadas pelo dono, sem repetir (ignora maiúsculas/minúsculas).
+function categoriasGastos() {
+  const lista = [];
+  [...GASTOS_CATEGORIAS, ...(DATA.gastosCategorias || [])].forEach((c) => {
+    if (!lista.some((x) => x.toLowerCase() === c.toLowerCase())) lista.push(c);
+  });
+  return lista;
+}
+
+function popularCategoriasGastos() {
+  const sel = document.getElementById("gs-categoria");
+  const filtro = document.getElementById("gs-filtro-cat");
+  if (!sel || !filtro) return;
+  const cats = categoriasGastos();
+  // No filtro entram também categorias antigas que já tenham gastos lançados.
+  const catsFiltro = cats.slice();
+  (DATA.gastos || []).forEach((g) => {
+    if (!catsFiltro.some((x) => x.toLowerCase() === g.categoria.toLowerCase())) catsFiltro.push(g.categoria);
+  });
+  const atual = sel.value;
+  const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+  sel.innerHTML = cats.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+  if (cats.includes(atual)) sel.value = atual;
+  filtro.innerHTML = `<option value="">Todas</option>` + catsFiltro.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+  filtro.value = GASTOS_FILTRO_CAT;
+
+  const box = document.getElementById("gs-cats-proprias");
+  if (box) {
+    const proprias = DATA.gastosCategorias || [];
+    box.innerHTML = proprias.length
+      ? `<span class="gs-cats-label">Suas categorias:</span>` +
+        proprias
+          .map((c) => `<span class="gs-cat-chip">${esc(c)}<button type="button" data-gscat="${esc(c)}" aria-label="Remover categoria ${esc(c)}">×</button></span>`)
+          .join("")
+      : "";
+    box.querySelectorAll("button[data-gscat]").forEach((b) =>
+      b.addEventListener("click", () => removerCategoriaGasto(b.dataset.gscat))
+    );
+  }
+}
+
+function adicionarCategoriaGasto() {
+  const input = document.getElementById("gs-nova-cat");
+  const nome = input.value.trim().replace(/\s+/g, " ");
+  if (!nome) {
+    toast("Digite o nome da categoria.");
+    return;
+  }
+  if (categoriasGastos().some((c) => c.toLowerCase() === nome.toLowerCase())) {
+    toast("Essa categoria já existe.");
+    document.getElementById("gs-categoria").value = categoriasGastos().find((c) => c.toLowerCase() === nome.toLowerCase());
+    return;
+  }
+  refreshDataFromStorage();
+  if (!Array.isArray(DATA.gastosCategorias)) DATA.gastosCategorias = [];
+  DATA.gastosCategorias.push(nome);
+  saveData();
+  input.value = "";
+  document.getElementById("gs-nova-cat-box").hidden = true;
+  popularCategoriasGastos();
+  document.getElementById("gs-categoria").value = nome;
+  toast(`Categoria "${nome}" criada.`);
+}
+
+// Tira a categoria da lista de opções. Gastos já lançados com ela continuam
+// salvos com o mesmo nome e seguem aparecendo no filtro.
+function removerCategoriaGasto(nome) {
+  refreshDataFromStorage();
+  DATA.gastosCategorias = (DATA.gastosCategorias || []).filter((c) => c !== nome);
+  saveData();
+  if (GASTOS_FILTRO_CAT === nome && !(DATA.gastos || []).some((g) => g.categoria === nome)) GASTOS_FILTRO_CAT = "";
+  toast(`Categoria "${nome}" removida das opções.`);
+  renderGastos();
 }
 
 function mesAnterior(key) {
@@ -2682,8 +2765,7 @@ function renderGastos() {
 
   const filtroMes = document.getElementById("gs-filtro-mes");
   if (filtroMes) filtroMes.value = GASTOS_FILTRO_MES;
-  const filtroCat = document.getElementById("gs-filtro-cat");
-  if (filtroCat) filtroCat.value = GASTOS_FILTRO_CAT;
+  popularCategoriasGastos();
 
   const doMes = gastos.filter((g) => g.data.slice(0, 7) === GASTOS_FILTRO_MES);
   const lista = doMes
@@ -4123,9 +4205,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Gastos gerais (index.html - dono)
   if (document.getElementById("btn-add-gasto")) {
-    document.getElementById("gs-categoria").innerHTML = GASTOS_CATEGORIAS.map((c) => `<option>${c}</option>`).join("");
-    document.getElementById("gs-filtro-cat").innerHTML =
-      `<option value="">Todas</option>` + GASTOS_CATEGORIAS.map((c) => `<option>${c}</option>`).join("");
+    popularCategoriasGastos();
+    document.getElementById("btn-nova-cat").addEventListener("click", () => {
+      const box = document.getElementById("gs-nova-cat-box");
+      box.hidden = !box.hidden;
+      if (!box.hidden) document.getElementById("gs-nova-cat").focus();
+    });
+    document.getElementById("btn-salvar-cat").addEventListener("click", adicionarCategoriaGasto);
+    document.getElementById("btn-cancelar-cat").addEventListener("click", () => {
+      document.getElementById("gs-nova-cat").value = "";
+      document.getElementById("gs-nova-cat-box").hidden = true;
+    });
+    document.getElementById("gs-nova-cat").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") adicionarCategoriaGasto();
+    });
     document.getElementById("gs-data").value = hojeLocalISO();
     document.getElementById("btn-add-gasto").addEventListener("click", adicionarGasto);
     document.getElementById("gs-valor").addEventListener("keydown", (e) => {
