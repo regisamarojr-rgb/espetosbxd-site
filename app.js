@@ -1419,10 +1419,16 @@ function custoUnitarioMenu(menuId) {
   }, 0);
 }
 
+// Custo de um item já lançado no pedido: receita do item + (se for jantinha
+// montada) o custo de cada espeto escolhido.
+function custoItemPedido(item) {
+  return (item.espetos || []).reduce((acc, e) => acc + custoUnitarioMenu(e.menuId), custoUnitarioMenu(item.menuId));
+}
+
 // Lucro previsto de um pedido: soma, item a item, (preço de venda − custo) × qtd.
 function calcularLucroPedido(order) {
   return order.items.reduce((acc, i) => {
-    const custoUnit = custoUnitarioMenu(i.menuId);
+    const custoUnit = custoItemPedido(i);
     return acc + (i.preco - custoUnit) * i.qtd;
   }, 0);
 }
@@ -1696,6 +1702,112 @@ function renderAll() {
 
 let CART = {}; // { menuId: qtd }
 
+/* ---------- Jantinha montada (quantidade e sabor de cada espeto) ----------
+   Cada jantinha adicionada vira uma linha própria no pedido, com a lista dos
+   espetos escolhidos. Regra de preço: o preço da jantinha no cardápio já inclui
+   JANTINHA_ESPETOS_INCLUSOS espeto(s) de qualquer sabor; cada espeto a mais
+   soma o preço daquele espeto no cardápio. */
+const JANTINHA_ESPETOS_INCLUSOS = 1;
+const JANTINHA_MAX_ESPETOS = 5;
+const JANTINHA_CATEGORIA_SABORES = "Espetos Premium";
+let CART_JANTINHAS = []; // [{ key, menuId, espetos: [menuId, ...] }]
+let JANTINHA_EDIT = null; // { menuId, espetos: [menuId|null, ...] } enquanto está montando
+
+function isJantinha(menuItem) {
+  return !!menuItem && menuItem.categoria === "Jantinha";
+}
+function saboresJantinha() {
+  return DATA.menu.filter((m) => m.categoria === JANTINHA_CATEGORIA_SABORES);
+}
+function precoJantinha(menuItem, espetos) {
+  return espetos.reduce((acc, id, idx) => {
+    if (idx < JANTINHA_ESPETOS_INCLUSOS || !id) return acc;
+    const s = DATA.menu.find((m) => m.id === id);
+    return acc + (s ? s.preco : 0);
+  }, menuItem.preco);
+}
+function nomeBaseJantinha(menuItem) {
+  return menuItem.nome.replace(/\s*\d+\s*espetos?\s*$/i, "").trim() || "Jantinha";
+}
+function resumoEspetos(espetos) {
+  const cont = {};
+  espetos.forEach((id) => {
+    const s = DATA.menu.find((m) => m.id === id);
+    const n = s ? s.nome : "?";
+    cont[n] = (cont[n] || 0) + 1;
+  });
+  return Object.entries(cont).map(([n, q]) => (q > 1 ? q + "x " : "") + n).join(", ");
+}
+function nomeJantinha(menuItem, espetos) {
+  const q = espetos.length;
+  return `${nomeBaseJantinha(menuItem)} ${q} espeto${q > 1 ? "s" : ""} (${resumoEspetos(espetos)})`;
+}
+function abrirMontagemJantinha(menuId) {
+  const sab = saboresJantinha();
+  JANTINHA_EDIT = { menuId, espetos: [sab[0] ? sab[0].id : null] };
+  renderCardapio();
+}
+function htmlMontagemJantinha(item) {
+  const sab = saboresJantinha();
+  const ed = JANTINHA_EDIT;
+  const n = ed.espetos.length;
+  const completo = ed.espetos.every(Boolean);
+  const slots = ed.espetos
+    .map(
+      (sel, i) => `
+      <div class="jt-slot">
+        <span class="jt-slot-label">Espeto ${i + 1}${i < JANTINHA_ESPETOS_INCLUSOS ? "" : ""}</span>
+        <div class="jt-chips">
+          ${sab
+            .map((s) => {
+              const extra = i >= JANTINHA_ESPETOS_INCLUSOS ? ` +${fmtMoney(s.preco)}` : "";
+              return `<button type="button" class="jt-chip${s.id === sel ? " ativo" : ""}" data-jt="sabor" data-i="${i}" data-s="${s.id}">${s.nome}<small>${extra}</small></button>`;
+            })
+            .join("")}
+        </div>
+      </div>`
+    )
+    .join("");
+  return `
+    <div class="jt-box">
+      <div class="jt-head">
+        <span class="jt-titulo">Quantos espetos?</span>
+        <div class="qty-control jt-qtd">
+          <button type="button" data-jt="menos" ${n <= 1 ? "disabled" : ""}>−</button>
+          <span>${n}</span>
+          <button type="button" data-jt="mais" ${n >= JANTINHA_MAX_ESPETOS ? "disabled" : ""}>+</button>
+        </div>
+      </div>
+      <div class="jt-slots">${slots}</div>
+      <div class="jt-foot">
+        <button type="button" class="jt-link" data-jt="repetir">Repetir o 1º sabor em todos</button>
+        <div class="jt-acoes">
+          <strong>${fmtMoney(precoJantinha(item, ed.espetos))}</strong>
+          <button type="button" class="btn secondary small" data-jt="cancelar">Cancelar</button>
+          <button type="button" class="btn small" data-jt="adicionar" ${completo ? "" : "disabled"}>Adicionar</button>
+        </div>
+      </div>
+      <p class="jt-regra">Preço inclui ${JANTINHA_ESPETOS_INCLUSOS} espeto. Cada espeto a mais soma o valor dele.</p>
+    </div>`;
+}
+function handleJantinhaClick(btn) {
+  const ed = JANTINHA_EDIT;
+  if (!ed) return;
+  const act = btn.dataset.jt;
+  const sab = saboresJantinha();
+  if (act === "sabor") ed.espetos[Number(btn.dataset.i)] = btn.dataset.s;
+  else if (act === "mais" && ed.espetos.length < JANTINHA_MAX_ESPETOS) ed.espetos.push(ed.espetos[ed.espetos.length - 1] || (sab[0] && sab[0].id) || null);
+  else if (act === "menos" && ed.espetos.length > 1) ed.espetos.pop();
+  else if (act === "repetir" && ed.espetos[0]) ed.espetos = ed.espetos.map(() => ed.espetos[0]);
+  else if (act === "cancelar") JANTINHA_EDIT = null;
+  else if (act === "adicionar") {
+    if (!ed.espetos.every(Boolean)) return;
+    CART_JANTINHAS.push({ key: uid("jt"), menuId: ed.menuId, espetos: ed.espetos.slice() });
+    JANTINHA_EDIT = null;
+  }
+  renderCardapio();
+}
+
 // Id do pedido que o cliente está acompanhando em tempo real no cardapio.html
 // (null quando nenhum pedido está sendo acompanhado, ex: página do dono).
 let ACOMPANHAR_PEDIDO_ID = null;
@@ -1730,6 +1842,29 @@ function renderCardapio() {
     list.className = "menu-list";
 
     DATA.menu.filter((m) => m.categoria === cat).forEach((item) => {
+      if (isJantinha(item)) {
+        const montadas = CART_JANTINHAS.filter((j) => j.menuId === item.id).length;
+        const editando = JANTINHA_EDIT && JANTINHA_EDIT.menuId === item.id;
+        const rowJ = document.createElement("div");
+        rowJ.className = "menu-item" + (montadas > 0 ? " tem-qtd" : "");
+        rowJ.innerHTML = `
+          <div class="info">
+            <strong>${nomeBaseJantinha(item)}</strong>
+            ${item.desc ? `<div class="desc">${item.desc}</div>` : ""}
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div class="price">a partir de ${fmtMoney(item.preco)}</div>
+            ${montadas ? `<span class="jt-count">${montadas} no pedido</span>` : ""}
+            ${editando ? "" : `<button type="button" class="btn small" data-jt="abrir" data-id="${item.id}">Montar</button>`}
+          </div>`;
+        list.appendChild(rowJ);
+        if (editando) {
+          const box = document.createElement("div");
+          box.innerHTML = htmlMontagemJantinha(item);
+          list.appendChild(box.firstElementChild);
+        }
+        return;
+      }
       const qty = CART[item.id] || 0;
       const row = document.createElement("div");
       row.className = "menu-item" + (qty > 0 ? " tem-qtd" : "");
@@ -1750,6 +1885,13 @@ function renderCardapio() {
       list.appendChild(row);
     });
     container.appendChild(list);
+  });
+
+  container.querySelectorAll("button[data-jt]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (btn.dataset.jt === "abrir") abrirMontagemJantinha(btn.dataset.id);
+      else handleJantinhaClick(btn);
+    });
   });
 
   container.querySelectorAll("button[data-act]").forEach((btn) => {
@@ -1775,7 +1917,7 @@ function renderCart() {
   box.innerHTML = "";
   let total = 0;
   const ids = Object.keys(CART);
-  if (ids.length === 0) {
+  if (ids.length === 0 && CART_JANTINHAS.length === 0) {
     box.innerHTML = `<div class="empty">Nenhum item selecionado</div>`;
   } else {
     ids.forEach((id) => {
@@ -1788,6 +1930,23 @@ function renderCart() {
       line.innerHTML = `<span>${qty}x ${item.nome}</span><span>${fmtMoney(subtotal)}</span>`;
       box.appendChild(line);
     });
+    CART_JANTINHAS.forEach((j) => {
+      const m = DATA.menu.find((x) => x.id === j.menuId);
+      if (!m) return;
+      const preco = precoJantinha(m, j.espetos);
+      total += preco;
+      const line = document.createElement("div");
+      line.className = "cart-line jt-cart-line";
+      line.innerHTML = `<span>1x ${nomeBaseJantinha(m)} · ${j.espetos.length} espeto${j.espetos.length > 1 ? "s" : ""}<small>${resumoEspetos(j.espetos)}</small></span>
+        <span class="jt-cart-dir">${fmtMoney(preco)} <button type="button" class="jt-remover" data-key="${j.key}" aria-label="Remover jantinha">×</button></span>`;
+      box.appendChild(line);
+    });
+    box.querySelectorAll(".jt-remover").forEach((b) =>
+      b.addEventListener("click", () => {
+        CART_JANTINHAS = CART_JANTINHAS.filter((j) => j.key !== b.dataset.key);
+        renderCardapio();
+      })
+    );
   }
 
   const taxaEntregaEl = document.getElementById("f-taxa-entrega");
@@ -1796,7 +1955,7 @@ function renderCart() {
   const totalFinal = total + (tipoEntrega === "entrega" ? taxaEntrega : 0);
 
   document.getElementById("cart-total").textContent = fmtMoney(totalFinal);
-  document.getElementById("btn-enviar-pedido").disabled = ids.length === 0;
+  document.getElementById("btn-enviar-pedido").disabled = ids.length === 0 && CART_JANTINHAS.length === 0;
 }
 
 function toggleEntregaFields() {
@@ -1972,7 +2131,7 @@ function renderPixQRCode(payload) {
 
 function enviarPedido() {
   const ids = Object.keys(CART);
-  if (ids.length === 0) return;
+  if (ids.length === 0 && CART_JANTINHAS.length === 0) return;
 
   // Garante que estamos partindo dos dados mais recentes salvos (evita sobrescrever
   // mudanças feitas em outra aba, como um pedido marcado como finalizado).
@@ -2012,6 +2171,20 @@ function enviarPedido() {
   const items = ids.map((id) => {
     const m = DATA.menu.find((x) => x.id === id);
     return { menuId: id, nome: m.nome, preco: m.preco, qtd: CART[id] };
+  });
+  CART_JANTINHAS.forEach((j) => {
+    const m = DATA.menu.find((x) => x.id === j.menuId);
+    if (!m) return;
+    items.push({
+      menuId: j.menuId,
+      nome: nomeJantinha(m, j.espetos),
+      preco: precoJantinha(m, j.espetos),
+      qtd: 1,
+      espetos: j.espetos.map((id) => {
+        const s = DATA.menu.find((x) => x.id === id);
+        return { menuId: id, nome: s ? s.nome : "" };
+      }),
+    });
   });
 
   const subtotal = items.reduce((acc, i) => acc + i.preco * i.qtd, 0);
@@ -2058,6 +2231,8 @@ function enviarPedido() {
   saveData();
 
   CART = {};
+  CART_JANTINHAS = [];
+  JANTINHA_EDIT = null;
   document.getElementById("form-pedido").reset();
   if (document.getElementById("f-taxa-entrega")) document.getElementById("f-taxa-entrega").value = 0;
   if (document.getElementById("f-bairro")) document.getElementById("f-bairro").value = "";
@@ -2406,6 +2581,17 @@ function ajustarEstoquePorPedido(order, sign) {
       if (!stockItem) return;
       const change = r.qtd * item.qtd * sign;
       stockItem.quantidade = Math.max(0, Math.round((stockItem.quantidade + change) * 100) / 100);
+    });
+  });
+  // Jantinha montada: desconta também cada espeto escolhido.
+  order.items.forEach((item) => {
+    (item.espetos || []).forEach((e) => {
+      (MENU_RECIPE[e.menuId] || []).forEach((r) => {
+        const stockItem = DATA.stock.find((s) => s.id === r.stockId);
+        if (!stockItem) return;
+        const change = r.qtd * item.qtd * sign;
+        stockItem.quantidade = Math.max(0, Math.round((stockItem.quantidade + change) * 100) / 100);
+      });
     });
   });
 }
@@ -3378,7 +3564,7 @@ function calcularLucroPorCategoria() {
       if (!porCategoria[menuItem.categoria]) {
         porCategoria[menuItem.categoria] = { categoria: menuItem.categoria, qtdVendida: 0, faturamento: 0, lucro: 0 };
       }
-      const custoUnit = custoUnitarioMenu(item.menuId);
+      const custoUnit = custoItemPedido(item);
       porCategoria[menuItem.categoria].qtdVendida += item.qtd;
       porCategoria[menuItem.categoria].faturamento += item.qtd * item.preco;
       porCategoria[menuItem.categoria].lucro += (item.preco - custoUnit) * item.qtd;
