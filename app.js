@@ -3187,6 +3187,39 @@ function renderColaboradores() {
    PAGINA: ESTOQUE
    =================================================== */
 
+// Item do cardápio vendido diretamente a partir deste item do estoque
+// (receita com um único ingrediente, ex: "Coração" → "Espeto de Coração").
+function menuDoEstoque(stockId) {
+  return DATA.menu.find((m) => {
+    const r = MENU_RECIPE[m.id];
+    return r && r.length === 1 && r[0].stockId === stockId;
+  });
+}
+
+// Itens do cardápio cujo preço não aparece em nenhuma linha do estoque
+// (ex: Jantinha, que usa vários ingredientes). Editados num quadro à parte.
+function menuSemLinhaNoEstoque() {
+  const ligados = new Set(DATA.stock.map((s) => (menuDoEstoque(s.id) || {}).id).filter(Boolean));
+  return DATA.menu.filter((m) => !ligados.has(m.id));
+}
+
+function atualizarPrecoVenda(menuId, valor) {
+  refreshDataFromStorage();
+  const m = DATA.menu.find((x) => x.id === menuId);
+  if (!m) return;
+  const v = Number(String(valor).replace(",", "."));
+  if (isNaN(v) || v <= 0) {
+    toast("Informe um preço de venda maior que zero.");
+    renderEstoque();
+    return;
+  }
+  m.preco = Math.round(v * 100) / 100;
+  saveData();
+  toast(`Preço de ${m.nome} atualizado no cardápio: ${fmtMoney(m.preco)}.`);
+  renderEstoque();
+  if (document.getElementById("menu-list")) renderCardapio();
+}
+
 function renderEstoque() {
   atualizarAlertaEstoqueBaixo();
   atualizarBadgePerdas();
@@ -3206,12 +3239,18 @@ function renderEstoque() {
   const table = document.createElement("table");
   table.innerHTML = `
     <thead>
-      <tr><th>Item</th><th>Qtd.</th><th>Unid.</th><th>Mínimo</th><th>Custo unit. (R$)</th><th>Status</th><th></th></tr>
+      <tr><th>Item</th><th>Qtd.</th><th>Unid.</th><th>Mínimo</th><th>Custo unit. (R$)</th><th>Preço de venda (R$)</th><th>Status</th><th></th></tr>
     </thead>
     <tbody>
       ${DATA.stock
-        .map(
-          (s) => `
+        .map((s) => {
+          const mv = menuDoEstoque(s.id);
+          const lucro = mv ? mv.preco - (Number(s.custo) || 0) : 0;
+          const celulaVenda = mv
+            ? `<input type="number" min="0" step="0.01" inputmode="decimal" class="input-custo" style="width:90px;" data-act="edit-venda" data-menu="${mv.id}" value="${mv.preco}" aria-label="Preço de venda de ${mv.nome}" />
+               <div class="es-venda-info">${mv.nome} no cardápio${s.custo > 0 ? ` · lucro ${fmtMoney(lucro)}` : ""}</div>`
+            : `<span class="es-venda-info" title="Este item não é vendido sozinho no cardápio">—</span>`;
+          return `
         <tr>
           <td>${s.nome}</td>
           <td>
@@ -3224,6 +3263,7 @@ function renderEstoque() {
           <td>${s.unidade}</td>
           <td>${s.minimo}</td>
           <td><input type="number" min="0" step="0.01" class="input-custo" style="width:90px;" data-act="edit-custo" data-id="${s.id}" value="${s.custo}" /></td>
+          <td>${celulaVenda}</td>
           <td>${s.quantidade <= s.minimo ? `<span class="tag baixo">Estoque baixo</span>` : `<span class="tag entregue">Ok</span>`}</td>
           <td>
             <button class="btn small secondary" data-act="registrar-compra" data-id="${s.id}">Registrar compra</button>
@@ -3231,12 +3271,36 @@ function renderEstoque() {
             <button class="btn small danger" data-act="del-estoque" data-id="${s.id}">Remover</button>
           </td>
         </tr>
-      `
-        )
+      `;
+        })
         .join("")}
     </tbody>
   `;
   container.appendChild(table);
+
+  // Quadro com os preços do cardápio que não têm linha própria no estoque.
+  const outros = menuSemLinhaNoEstoque();
+  if (outros.length) {
+    const box = document.createElement("div");
+    box.className = "card es-outros-precos";
+    box.innerHTML = `
+      <h3 style="margin-bottom:4px;">Outros preços do cardápio</h3>
+      <p style="color:var(--muted); font-size:12px; margin-bottom:10px;">Itens vendidos no cardápio que usam mais de um ingrediente, como a jantinha. O preço muda direto no cardápio.</p>
+      ${outros
+        .map(
+          (m) => `
+        <div class="es-outro-linha">
+          <span><strong>${m.nome}</strong><small>${m.categoria}</small></span>
+          <input type="number" min="0" step="0.01" inputmode="decimal" class="input-custo" style="width:100px;" data-act="edit-venda" data-menu="${m.id}" value="${m.preco}" aria-label="Preço de venda de ${m.nome}" />
+        </div>`
+        )
+        .join("")}`;
+    container.appendChild(box);
+  }
+
+  container.querySelectorAll("input[data-act='edit-venda']").forEach((input) => {
+    input.addEventListener("change", () => atualizarPrecoVenda(input.dataset.menu, input.value));
+  });
 
   container.querySelectorAll("button[data-act]").forEach((btn) => {
     btn.addEventListener("click", () => {

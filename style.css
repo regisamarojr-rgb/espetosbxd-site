@@ -1200,3 +1200,9 @@ body.cardapio-client .toast {
 .gs-editando td { background: var(--bg); vertical-align: middle; }
 .gs-editando input, .gs-editando select { width: 100%; min-width: 90px; padding: 6px 8px; font-size: 13px; }
 .gs-editando .gs-e-valor { max-width: 110px; text-align: right; }
+
+/* ---------- Estoque: preço de venda ---------- */
+.es-venda-info { display: block; font-size: 11px; color: var(--muted); margin-top: 3px; white-space: nowrap; }
+.es-outros-precos { margin-top: 20px; }
+.es-outro-linha { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border); }
+.es-outro-linha small { display: block; font-size: 12px; color: var(--muted); }
